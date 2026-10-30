@@ -1,13 +1,28 @@
 import * as React from "react";
+import { Slot } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+function Card({
+  className,
+  asChild = false,
+  interactive = false,
+  ...props
+}: React.ComponentProps<"div"> & {
+  /** Render as the child element, e.g. <Card asChild interactive><Link …/></Card>. */
+  asChild?: boolean;
+  /** Clickable card (S-04 drill-down): stronger edge and lift on hover. */
+  interactive?: boolean;
+}) {
+  const Comp = asChild ? Slot.Root : "div";
+
   return (
-    <div
+    <Comp
       data-slot="card"
       className={cn(
         "flex flex-col gap-4 rounded-lg border border-border bg-surface py-6 text-text",
+        interactive &&
+          "cursor-pointer transition-[border-color,box-shadow] duration-150 hover:border-border-strong hover:shadow-raised",
         className,
       )}
       {...props}
@@ -28,9 +43,16 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+// A heading by default so card titles show up in screen-reader heading navigation.
+function CardTitle({
+  className,
+  asChild = false,
+  ...props
+}: React.ComponentProps<"h3"> & { asChild?: boolean }) {
+  const Comp = asChild ? Slot.Root : "h3";
+
   return (
-    <div
+    <Comp
       data-slot="card-title"
       className={cn("text-h3 font-semibold", className)}
       {...props}

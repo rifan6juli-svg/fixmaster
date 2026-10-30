@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from 'react';
+import { useId, useSyncExternalStore } from 'react';
 
 interface MascotProps {
   /** Rendered height in px (width follows the probe silhouette). */
@@ -21,12 +21,23 @@ const EDGE = 'var(--volt-edge)';
 const DISPLAY = 'var(--volt-display)';
 const METAL = 'var(--volt-metal)';
 
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+
+function subscribeReducedMotion(onChange: () => void) {
+  if (typeof window.matchMedia !== 'function') return () => {};
+  const media = window.matchMedia(REDUCED_MOTION_QUERY);
+  media.addEventListener('change', onChange);
+  return () => media.removeEventListener('change', onChange);
+}
+
 function getReducedMotionPreference() {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
+  return typeof window.matchMedia === 'function' && window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+// The server cannot know the user's motion preference. Hydrating with `false`
+// and updating right after avoids a server/client markup mismatch.
+function getServerReducedMotionPreference() {
+  return false;
 }
 
 /**
@@ -39,7 +50,11 @@ function getReducedMotionPreference() {
  */
 export function Mascot({ size = 96, variant = 'face', animated = true, className }: MascotProps) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
-  const [reduceMotion, setReduceMotion] = useState(getReducedMotionPreference);
+  const reduceMotion = useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotionPreference,
+    getServerReducedMotionPreference
+  );
   const shellId = `volt-shell-${uid}`;
   const amberId = `volt-amber-${uid}`;
   const glowId = `volt-glow-${uid}`;
@@ -50,14 +65,6 @@ export function Mascot({ size = 96, variant = 'face', animated = true, className
   const viewHeight = isFull ? 176 : 148;
   const viewBox = isFull ? '0 0 148 176' : '18 2 112 148';
   const width = Math.round((size * viewWidth) / viewHeight);
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return;
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handleChange = (event: MediaQueryListEvent) => setReduceMotion(event.matches);
-    media.addEventListener('change', handleChange);
-    return () => media.removeEventListener('change', handleChange);
-  }, []);
 
   return (
     <svg

@@ -4,7 +4,8 @@ import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "@/styles/globals.css";
 
-// docs/DBD.md section 2: Plex Sans 400/500/600 (variable font), Plex Mono 500.
+// docs/DBD.md section 2: Plex Sans 400/500/600 (variable font), Plex Mono 500
+// (700 only for the mascot's "V-01" label, so the browser does not fake bold).
 const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: "variable",
@@ -14,7 +15,7 @@ const plexSans = IBM_Plex_Sans({
 
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: "500",
+  weight: ["500", "700"],
   variable: "--font-plex-mono",
   display: "swap",
 });

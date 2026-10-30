@@ -26,6 +26,7 @@
   --fm-success: #137036;
   --fm-warning: #9a4508;
   --fm-danger: #b42318;
+  --fm-danger-hover: #9a1d14;
   --fm-on-danger: #ffffff;
   --fm-elevation-raised:
     0 1px 2px rgb(17 20 25 / 0.06), 0 2px 6px rgb(17 20 25 / 0.08);
@@ -65,6 +66,7 @@
     --fm-success: #4ade80;
     --fm-warning: #fbbf5a;
     --fm-danger: #f87171;
+    --fm-danger-hover: #fa8a8a;
     --fm-on-danger: #111419;
     --fm-elevation-raised: none;
   }
@@ -90,6 +92,7 @@
   --color-success: var(--fm-success);
   --color-warning: var(--fm-warning);
   --color-danger: var(--fm-danger);
+  --color-danger-hover: var(--fm-danger-hover);
   --color-on-danger: var(--fm-on-danger);
 
   --shadow-raised: var(--fm-elevation-raised);
@@ -122,17 +125,21 @@
   --text-caption--line-height: 1rem;
 }
 
-/* Brand chamfer (8px cut corners). Only for readouts, the S-18 header, and empty-state panels. */
+/*
+ * Brand chamfer (cut corners). Only for readouts, the S-18 header, and empty-state panels.
+ * Size via [--chamfer-size:12px]; set it on every nested chamfer, since it inherits.
+ */
 @utility chamfer {
+  --chamfer: var(--chamfer-size, 8px);
   clip-path: polygon(
-    8px 0,
-    calc(100% - 8px) 0,
-    100% 8px,
-    100% calc(100% - 8px),
-    calc(100% - 8px) 100%,
-    8px 100%,
-    0 calc(100% - 8px),
-    0 8px
+    var(--chamfer) 0,
+    calc(100% - var(--chamfer)) 0,
+    100% var(--chamfer),
+    100% calc(100% - var(--chamfer)),
+    calc(100% - var(--chamfer)) 100%,
+    var(--chamfer) 100%,
+    0 calc(100% - var(--chamfer)),
+    0 var(--chamfer)
   );
 }
 
@@ -154,6 +161,25 @@
   :focus-visible {
     outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: color-mix(
+      in oklab,
+      var(--color-primary) 35%,
+      transparent
+    );
+    color: var(--color-text);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
   }
 }
 

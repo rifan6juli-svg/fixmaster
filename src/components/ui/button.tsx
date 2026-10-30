@@ -6,7 +6,7 @@ import { Slot } from "radix-ui";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-colors duration-150 ease-out disabled:pointer-events-none disabled:opacity-50 aria-busy:cursor-progress [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-colors duration-150 ease-out disabled:pointer-events-none disabled:not-aria-busy:opacity-50 aria-busy:cursor-progress [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
   {
     variants: {
       variant: {
@@ -14,7 +14,7 @@ const buttonVariants = cva(
         secondary:
           "border border-border-strong bg-surface text-text hover:bg-surface-sunken",
         ghost: "text-text hover:bg-surface-sunken",
-        danger: "bg-danger text-on-danger hover:bg-danger/90",
+        danger: "bg-danger text-on-danger hover:bg-danger-hover",
       },
       size: {
         md: "h-11 px-4 text-body-sm",

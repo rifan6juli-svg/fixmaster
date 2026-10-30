@@ -1,6 +1,6 @@
 # DBD - Fixmaster
 
-> Versi: 0.4 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, AFD.md
+> Versi: 0.5 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, AFD.md
 > Sumber visual: file di `brand/` (logo, ikon, maskot VOLT Probe). Semua warna di bawah diturunkan dari file tersebut.
 
 ## 1. Karakter Brand
@@ -48,6 +48,7 @@
 | success | #137036 | #4ade80 | Siap diambil, lunas |
 | warning | #9a4508 | #fbbf5a | Menunggu persetujuan, sisa bayar, banner trial |
 | danger | #b42318 | #f87171 | Dibatalkan, error, hapus |
+| danger-hover | #9a1d14 | #fa8a8a | Hover tombol danger (arah sama dengan primary-hover) |
 | on-danger | #ffffff | #111419 | Teks tombol danger |
 
 Badge punya dua sumbu: warna (`tone`) dan bentuk (`fill`). `tint` = latar token 12%, teks warna token; `solid` = khusus kerja aktif (`primary` + `on-primary`); `outline`/`dashed` = border 1px warna token tanpa latar. Semua kombinasi >= 4.5:1 di atas `background` maupun `surface` (dijaga `tests/unit/design-tokens.test.ts`).
@@ -68,14 +69,15 @@ Badge punya dua sumbu: warna (`tone`) dan bentuk (`fill`). `tint` = latar token 
 | cancelled | Dibatalkan | danger | tint | `circle-x` |
 
 **Tipografi** [ASUMSI A-10]
-- Font: IBM Plex Sans (400, 500, 600) untuk UI; IBM Plex Mono (500) untuk nomor tiket/nota, IMEI, SKU, readout. Dimuat via `next/font/google` (self-host saat build).
+- Font: IBM Plex Sans (400, 500, 600) untuk UI; IBM Plex Mono (500; 700 hanya untuk label "V-01" maskot) untuk nomor tiket/nota, IMEI, SKU, readout. Dimuat via `next/font/google` (self-host saat build).
 - Skala (ukuran/line-height, px): display 32/40 600 (judul S-18, state kosong); h1 24/32 600; h2 20/28 600; h3 16/24 600; body 16/24; body-sm 14/20 (tabel desktop); caption 12/16 500.
 - Input selalu >= 16px (mencegah zoom iOS). Angka uang di tabel memakai `tabular-nums` dan rata kanan.
 
 **Spacing & bentuk**
 - Skala spacing: 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64.
 - Radius: sm 4px (badge, checkbox), md 6px (button, input), lg 10px (card, dialog).
-- Chamfer brand: sudut terpotong 8px (`clip-path`) **hanya** untuk readout chip, kartu header status di S-18, dan panel state kosong. Kartu dan tabel biasa tetap memakai radius.
+- Chamfer brand: sudut terpotong (`chamfer`, ukuran lewat `--chamfer-size`: 8px untuk chip, 12px untuk panel) **hanya** untuk readout chip, kartu header status di S-18, dan panel state kosong. Selalu dengan bingkai 1px berupa chamfer bertumpuk (readout: `--volt-edge`; panel: `border-strong`), karena `clip-path` memotong border biasa dan tanpa bingkai bentuknya hilang di mode gelap. Kartu dan tabel biasa tetap memakai radius.
+- Teks: heading `text-wrap: balance`, paragraf `text-wrap: pretty`. Seleksi teks: `primary` 35%.
 - Bayangan: terang `0 1px 2px rgb(17 20 25 / .06), 0 2px 6px rgb(17 20 25 / .08)` untuk surface-raised; gelap tanpa bayangan (pakai surface-raised + border).
 - Grid & lebar maks: konten 1280px; form (S-06, S-16) maks 720px; S-18 maks 560px di tengah; sidebar desktop 240px.
 - Gerak: 150-200ms ease-out untuk hover/dialog; animasi dekoratif hanya maskot dan titik "live" di S-18; semua mematuhi `prefers-reduced-motion`.
@@ -84,25 +86,25 @@ Badge punya dua sumbu: warna (`tone`) dan bentuk (`fill`). `tint` = latar token 
 | Komponen | Varian | State wajib | Dipakai di |
 |---|---|---|---|
 | Button | primary, secondary, ghost, danger; ukuran md (44px, memenuhi target sentuh) & lg (48px) | default, hover, focus, disabled, loading | semua layar |
-| Input | text, password, tel (nomor WA), money (prefix "Rp", pemisah ribuan), textarea, select, date; tinggi 44px | default, focus, error, disabled | S-01-S-03, S-06, S-07, S-11, S-13, S-15-S-17, S-20 |
+| Input | text, password, tel (nomor WA), money (`MoneyInput`: prefix "Rp", pemisah ribuan, rata kanan, mengirim integer Rupiah), textarea, select, date; tinggi 44px; dibungkus `Field` (label + hint + error, `aria-describedby` otomatis); contoh format ditulis sebagai hint, bukan placeholder; nilai yang hanya dibaca memakai `readOnly` | default, focus, error, disabled | S-01-S-03, S-06, S-07, S-11, S-13, S-15-S-17, S-20 |
 | Combobox | cari pelanggan, cari part (menampilkan sisa stok) | loading, kosong, hasil, error | S-06, S-07 |
 | Checkbox group | kelengkapan unit, setuju syarat servis | checked, focus, disabled | S-06 |
 | Switch | pengaturan on/off (wajib tanda tangan, teknisi ambil tiket) | on, off, focus, disabled | S-16 |
 | Badge | status tiket (8), stok menipis, status langganan | - | S-04, S-05, S-07, S-11, S-12, S-18, S-19 |
-| Readout | nomor tiket, total/sisa bayar (font mono, readout-bg, chamfer) | - | S-07, S-18 |
-| Card | kartu angka (bisa diklik), kartu tiket mobile, section detail | default, hover, focus | S-04, S-05, S-07, S-13, S-17, S-20 |
+| Readout | nomor tiket, total/sisa bayar (font mono, readout-bg, chamfer + bingkai `--volt-edge`) | - | S-07, S-18 |
+| Card | kartu angka (`interactive` + `asChild` ke link, hover: border-strong + bayangan), kartu tiket mobile, section detail; `CardTitle` berupa heading (`h3`) | default, hover, focus | S-04, S-05, S-07, S-13, S-17, S-20 |
 | Table | menjadi daftar kartu di < 640px | loading (skeleton), kosong | S-05, S-10-S-15, S-19, S-20 |
 | Tabs | owner/admin: "Semua" / "Belum ditugaskan"; teknisi: "Tiket saya" / "Belum ditugaskan" (jika klaim aktif) | aktif, focus | S-05 |
 | Pagination | 25 baris per halaman, tombol Sebelumnya/Berikutnya + info "1-25 dari N" | disabled di ujung | S-05, S-10, S-12, S-19 |
 | Dropdown menu | menu "Kirim WA" (item nonaktif sesuai status), menu user | open, item disabled, focus | S-07, header |
 | Date range picker | preset (Hari ini, 7 hari, Bulan ini, Bulan lalu) + 2 input date | error rentang | S-14 |
-| Dialog | konfirmasi, form singkat (staf, stok masuk, pembayaran, persetujuan) | open, submitting, error | S-07, S-13, S-15, S-18, S-20 |
-| Toast / Banner | toast sukses (tint `success`), error (tint `danger`, tetap tampil sampai ditutup, boleh punya tombol aksi pemulihan), info; tombol tutup dengan area klik 44px dan label Indonesia; di mobile toast berada di atas bottom bar (`--fm-bottom-bar-height`); banner langganan & peringatan estimasi | auto-hilang 4 detik (sukses) | semua layar `(app)`, S-07 |
+| Dialog | konfirmasi, form singkat (staf, stok masuk, pembayaran, persetujuan); isi dibungkus `<form>` agar Enter menyimpan; footer: Batal lalu aksi utama, urutan DOM = urutan visual di semua lebar | open, submitting, error | S-07, S-13, S-15, S-18, S-20 |
+| Toast / Banner | toast sukses (tint `success`), error (tint `danger`, tetap tampil sampai ditutup, boleh punya tombol aksi pemulihan), info; tombol tutup dengan area klik 44px dan label Indonesia; pesan error diumumkan lewat region `role="alert"` (assertive); di mobile toast berada di atas bottom bar (`--fm-bottom-bar-height`); banner langganan & peringatan estimasi | auto-hilang 4 detik (sukses) | semua layar `(app)`, S-07 |
 | SignaturePad | area min 300x150px di surface-sunken + tombol "Ulangi" | kosong, terisi, error | S-06 |
 | Timeline | semua event (S-07), event publik (S-18) | - | S-07, S-18, S-20 (log) |
 | Navigasi | sidebar (>= 1024px), rail ikon 64px (640-1023px), bottom bar + sheet "Lainnya" (< 640px) | aktif, hover, focus | semua layar `(app)` dan `admin/` |
-| EmptyState | dengan maskot `full` atau tanpa maskot | - | S-04, S-05, S-10, S-12, S-14, S-15, S-18 (kedaluwarsa), 404/error |
-| Skeleton | baris tabel, kartu, form | - | semua layar dengan data |
+| EmptyState | panel chamfer 12px di atas `surface` dengan bingkai `border-strong`; dengan maskot `full` 120px atau tanpa maskot | - | S-04, S-05, S-10, S-12, S-14, S-15, S-18 (kedaluwarsa), 404/error |
+| Skeleton | baris tabel, kartu, form; kontainer diberi `aria-busy="true"` + teks `sr-only` "Memuat data…" | - | semua layar dengan data |
 | Halaman cetak | `thermal_58` (lebar cetak 48mm), `thermal_80` (72mm), `a4` | selalu mode terang, teks hitam, tanpa latar berwarna | S-08, S-09 |
 
 ## 4. Responsivitas
@@ -118,7 +120,7 @@ Pendekatan: mobile-first. S-06 dioptimalkan untuk tablet di meja kasir (pad tand
 - Kontras teks minimal 4.5:1 dan komponen non-teks 3:1. Terverifikasi: teks utama 17.6:1 / 15.9:1; text-muted 6.6:1 / 8.6:1; on-primary 8.7:1 / 9.1:1; brand-text 5.6:1 / 9.1:1; badge terendah 4.75:1 (brand-text terang di atas `background`); readout 11.3:1; border-strong 3.7:1 / 4.0:1 (terang / gelap).
 - Status tidak pernah dibedakan hanya dengan warna (ikon + label).
 - Target sentuh minimal 44x44px; fokus keyboard terlihat (`focus-ring`); semua aksi bisa dicapai tanpa mouse; urutan tab mengikuti urutan visual.
-- Form: setiap input punya `<label>`; pesan error dihubungkan via `aria-describedby`; toast di region `aria-live="polite"` (error: `assertive`).
+- Form: setiap input punya `<label>`; pesan error dihubungkan via `aria-describedby`; toast sukses/info diumumkan `polite`, toast error lewat region `role="alert"` (assertive).
 - Gambar bermakna punya teks alternatif; maskot dekoratif (`aria-hidden`, sudah di komponen); `<html lang="id">`.
 
 ## 6. Aset

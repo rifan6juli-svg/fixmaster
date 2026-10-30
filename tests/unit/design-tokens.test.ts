@@ -101,6 +101,13 @@ describe.each([
     expect(contrast(t["on-primary"]!, t.primary!)).toBeGreaterThanOrEqual(4.5);
   });
 
+  it.each(["danger", "danger-hover"])(
+    "on-danger text is >= 4.5:1 on %s",
+    (bg) => {
+      expect(contrast(t["on-danger"]!, t[bg]!)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
   it("readout text is >= 4.5:1 on readout background", () => {
     expect(
       contrast(t["readout-text"]!, t["readout-bg"]!),
