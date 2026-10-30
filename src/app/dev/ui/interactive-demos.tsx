@@ -54,7 +54,14 @@ export function ToastDemo() {
       </Button>
       <Button
         variant="secondary"
-        onClick={() => toastError("Stok tidak cukup (sisa 2).")}
+        onClick={() =>
+          toastError("Stok tidak cukup (sisa 2).", {
+            action: {
+              label: "Tambah sebagai part non-stok",
+              onClick: () => {},
+            },
+          })
+        }
       >
         Toast error
       </Button>

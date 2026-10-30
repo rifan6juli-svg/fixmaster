@@ -1,6 +1,6 @@
 # DBD - Fixmaster
 
-> Versi: 0.3 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, AFD.md
+> Versi: 0.4 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, AFD.md
 > Sumber visual: file di `brand/` (logo, ikon, maskot VOLT Probe). Semua warna di bawah diturunkan dari file tersebut.
 
 ## 1. Karakter Brand
@@ -42,30 +42,30 @@
 | primary-hover | #e0920f | #f7b84a | Hover tombol utama |
 | on-primary | #15191f | #111419 | Teks di atas primary (**jangan putih**) |
 | brand-text | #8f5507 | #f5a623 | Link, item navigasi aktif |
-| accent | #0f766b | #3dd9c4 | Info, status "Pengecekan" |
-| focus-ring | #0f766b | #3dd9c4 | Outline fokus 2px, offset 2px |
+| accent | #0d6c62 | #3dd9c4 | Info, status "Pengecekan" |
+| focus-ring | #0d6c62 | #3dd9c4 | Outline fokus 2px, offset 2px |
 | readout-bg / readout-text | #070a0d / #3dd9c4 | #070a0d / #3dd9c4 | Chip "LCD" untuk nomor tiket & total (kedua mode) |
 | success | #137036 | #4ade80 | Siap diambil, lunas |
 | warning | #9a4508 | #fbbf5a | Menunggu persetujuan, sisa bayar, banner trial |
 | danger | #b42318 | #f87171 | Dibatalkan, error, hapus |
 | on-danger | #ffffff | #111419 | Teks tombol danger |
 
-Badge memakai latar = warna token dengan opasitas 12% di atas `surface`, teks = warna token (semua kombinasi >= 4.5:1, lihat bagian 5).
+Badge punya dua sumbu: warna (`tone`) dan bentuk (`fill`). `tint` = latar token 12%, teks warna token; `solid` = khusus kerja aktif (`primary` + `on-primary`); `outline`/`dashed` = border 1px warna token tanpa latar. Semua kombinasi >= 4.5:1 di atas `background` maupun `surface` (dijaga `tests/unit/design-tokens.test.ts`).
 
 **Token maskot** (wajib ada di `:root`, nilai sama di kedua mode karena maskot adalah benda fisik):
 `--brand-500: #f5a623; --brand-700: #c0750a; --accent-500: #3dd9c4; --volt-shell: #15191f; --volt-shell-high: #303741; --volt-edge: #606a76; --volt-display: #070a0d; --volt-metal: #aab2bd; --font-mono: <IBM Plex Mono>`
 
-**Status tiket** (warna selalu disertai ikon + label)
-| Status | Label UI | Token | Ikon lucide |
-|---|---|---|---|
-| received | Diterima | text-muted | `inbox` |
-| diagnosing | Pengecekan | accent | `scan-search` |
-| awaiting_approval | Menunggu persetujuan | warning | `hourglass` |
-| in_progress | Dikerjakan | brand-text | `wrench` |
-| waiting_parts | Menunggu part | warning | `package` |
-| ready | Siap diambil | success | `circle-check` |
-| picked_up | Sudah diambil | text-muted | `check-check` |
-| cancelled | Dibatalkan | danger | `circle-x` |
+**Status tiket** (warna selalu disertai ikon + label + bentuk). Bentuk membedakan "sedang dikerjakan" (solid, satu-satunya) dari "menunggu pihak lain" (putus-putus) tanpa bergantung pada warna.
+| Status | Label UI | Token | Bentuk | Ikon lucide |
+|---|---|---|---|---|
+| received | Diterima | text-muted | tint | `inbox` |
+| diagnosing | Pengecekan | accent | tint | `scan-search` |
+| awaiting_approval | Menunggu persetujuan | warning | dashed | `hourglass` |
+| in_progress | Dikerjakan | brand-text | solid (`primary`) | `wrench` |
+| waiting_parts | Menunggu part | warning | dashed | `package` |
+| ready | Siap diambil | success | tint | `circle-check` |
+| picked_up | Sudah diambil | text-muted | outline | `check-check` |
+| cancelled | Dibatalkan | danger | tint | `circle-x` |
 
 **Tipografi** [ASUMSI A-10]
 - Font: IBM Plex Sans (400, 500, 600) untuk UI; IBM Plex Mono (500) untuk nomor tiket/nota, IMEI, SKU, readout. Dimuat via `next/font/google` (self-host saat build).
@@ -97,7 +97,7 @@ Badge memakai latar = warna token dengan opasitas 12% di atas `surface`, teks = 
 | Dropdown menu | menu "Kirim WA" (item nonaktif sesuai status), menu user | open, item disabled, focus | S-07, header |
 | Date range picker | preset (Hari ini, 7 hari, Bulan ini, Bulan lalu) + 2 input date | error rentang | S-14 |
 | Dialog | konfirmasi, form singkat (staf, stok masuk, pembayaran, persetujuan) | open, submitting, error | S-07, S-13, S-15, S-18, S-20 |
-| Toast / Banner | sukses, error, info; banner langganan & peringatan estimasi | auto-hilang 4 detik (sukses) | semua layar `(app)`, S-07 |
+| Toast / Banner | toast sukses (tint `success`), error (tint `danger`, tetap tampil sampai ditutup, boleh punya tombol aksi pemulihan), info; tombol tutup dengan area klik 44px dan label Indonesia; di mobile toast berada di atas bottom bar (`--fm-bottom-bar-height`); banner langganan & peringatan estimasi | auto-hilang 4 detik (sukses) | semua layar `(app)`, S-07 |
 | SignaturePad | area min 300x150px di surface-sunken + tombol "Ulangi" | kosong, terisi, error | S-06 |
 | Timeline | semua event (S-07), event publik (S-18) | - | S-07, S-18, S-20 (log) |
 | Navigasi | sidebar (>= 1024px), rail ikon 64px (640-1023px), bottom bar + sheet "Lainnya" (< 640px) | aktif, hover, focus | semua layar `(app)` dan `admin/` |
@@ -115,7 +115,7 @@ Badge memakai latar = warna token dengan opasitas 12% di atas `surface`, teks = 
 Pendekatan: mobile-first. S-06 dioptimalkan untuk tablet di meja kasir (pad tanda tangan lebar penuh).
 
 ## 5. Aksesibilitas
-- Kontras teks minimal 4.5:1 dan komponen non-teks 3:1. Terverifikasi: teks utama 17.6:1 / 15.9:1; text-muted 6.6:1 / 8.6:1; on-primary 8.7:1 / 9.1:1; brand-text 5.6:1 / 9.1:1; badge terendah 4.66:1 (accent terang); readout 11.3:1; border-strong 3.7:1 / 4.0:1 (terang / gelap).
+- Kontras teks minimal 4.5:1 dan komponen non-teks 3:1. Terverifikasi: teks utama 17.6:1 / 15.9:1; text-muted 6.6:1 / 8.6:1; on-primary 8.7:1 / 9.1:1; brand-text 5.6:1 / 9.1:1; badge terendah 4.75:1 (brand-text terang di atas `background`); readout 11.3:1; border-strong 3.7:1 / 4.0:1 (terang / gelap).
 - Status tidak pernah dibedakan hanya dengan warna (ikon + label).
 - Target sentuh minimal 44x44px; fokus keyboard terlihat (`focus-ring`); semua aksi bisa dicapai tanpa mouse; urutan tab mengikuti urutan visual.
 - Form: setiap input punya `<label>`; pesan error dihubungkan via `aria-describedby`; toast di region `aria-live="polite"` (error: `assertive`).

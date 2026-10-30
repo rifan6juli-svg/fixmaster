@@ -19,8 +19,8 @@
   --fm-primary-hover: #e0920f;
   --fm-on-primary: #15191f;
   --fm-brand-text: #8f5507;
-  --fm-accent: #0f766b;
-  --fm-focus-ring: #0f766b;
+  --fm-accent: #0d6c62;
+  --fm-focus-ring: #0d6c62;
   --fm-readout-bg: #070a0d;
   --fm-readout-text: #3dd9c4;
   --fm-success: #137036;
@@ -29,6 +29,9 @@
   --fm-on-danger: #ffffff;
   --fm-elevation-raised:
     0 1px 2px rgb(17 20 25 / 0.06), 0 2px 6px rgb(17 20 25 / 0.08);
+
+  /* Height of the mobile bottom bar; the app shell (IPD step 5) sets it so toasts sit above it. */
+  --fm-bottom-bar-height: 0px;
 
   /* Mascot tokens: identical in both modes (the mascot is a physical object). */
   --brand-500: #f5a623;
