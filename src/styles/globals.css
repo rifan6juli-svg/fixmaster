@@ -1,0 +1,195 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * Design tokens from docs/DBD.md section 2.
+ * Raw values use the --fm- prefix; Tailwind utilities use the DBD names
+ * (bg-surface, text-text-muted, ...). Dark mode follows the OS only.
+ */
+:root {
+  --fm-background: #f5f6f8;
+  --fm-surface: #ffffff;
+  --fm-surface-raised: #ffffff;
+  --fm-surface-sunken: #eceef1;
+  --fm-border: #dcdfe4;
+  --fm-border-strong: #7c8591;
+  --fm-text: #15191f;
+  --fm-text-muted: #4f5965;
+  --fm-primary: #f5a623;
+  --fm-primary-hover: #e0920f;
+  --fm-on-primary: #15191f;
+  --fm-brand-text: #8f5507;
+  --fm-accent: #0d6c62;
+  --fm-focus-ring: #0d6c62;
+  --fm-readout-bg: #070a0d;
+  --fm-readout-text: #3dd9c4;
+  --fm-success: #137036;
+  --fm-warning: #9a4508;
+  --fm-danger: #b42318;
+  --fm-danger-hover: #9a1d14;
+  --fm-on-danger: #ffffff;
+  --fm-elevation-raised:
+    0 1px 2px rgb(17 20 25 / 0.06), 0 2px 6px rgb(17 20 25 / 0.08);
+
+  /* Height of the mobile bottom bar; the app shell (IPD step 5) sets it so toasts sit above it. */
+  --fm-bottom-bar-height: 0px;
+
+  /* Mascot tokens: identical in both modes (the mascot is a physical object). */
+  --brand-500: #f5a623;
+  --brand-700: #c0750a;
+  --accent-500: #3dd9c4;
+  --volt-shell: #15191f;
+  --volt-shell-high: #303741;
+  --volt-edge: #606a76;
+  --volt-display: #070a0d;
+  --volt-metal: #aab2bd;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fm-background: #111419;
+    --fm-surface: #15191f;
+    --fm-surface-raised: #1b2027;
+    --fm-surface-sunken: #070a0d;
+    --fm-border: #2c333c;
+    --fm-border-strong: #6f7a87;
+    --fm-text: #eceef1;
+    --fm-text-muted: #aab2bd;
+    --fm-primary: #f5a623;
+    --fm-primary-hover: #f7b84a;
+    --fm-on-primary: #111419;
+    --fm-brand-text: #f5a623;
+    --fm-accent: #3dd9c4;
+    --fm-focus-ring: #3dd9c4;
+    --fm-success: #4ade80;
+    --fm-warning: #fbbf5a;
+    --fm-danger: #f87171;
+    --fm-danger-hover: #fa8a8a;
+    --fm-on-danger: #111419;
+    --fm-elevation-raised: none;
+  }
+}
+
+@theme inline {
+  --color-background: var(--fm-background);
+  --color-surface: var(--fm-surface);
+  --color-surface-raised: var(--fm-surface-raised);
+  --color-surface-sunken: var(--fm-surface-sunken);
+  --color-border: var(--fm-border);
+  --color-border-strong: var(--fm-border-strong);
+  --color-text: var(--fm-text);
+  --color-text-muted: var(--fm-text-muted);
+  --color-primary: var(--fm-primary);
+  --color-primary-hover: var(--fm-primary-hover);
+  --color-on-primary: var(--fm-on-primary);
+  --color-brand-text: var(--fm-brand-text);
+  --color-accent: var(--fm-accent);
+  --color-focus-ring: var(--fm-focus-ring);
+  --color-readout-bg: var(--fm-readout-bg);
+  --color-readout-text: var(--fm-readout-text);
+  --color-success: var(--fm-success);
+  --color-warning: var(--fm-warning);
+  --color-danger: var(--fm-danger);
+  --color-danger-hover: var(--fm-danger-hover);
+  --color-on-danger: var(--fm-on-danger);
+
+  --shadow-raised: var(--fm-elevation-raised);
+}
+
+/* Emitted on :root even when unused so the mascot's var(--font-mono) resolves. */
+@theme static {
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+@theme {
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --text-display: 2rem;
+  --text-display--line-height: 2.5rem;
+  --text-h1: 1.5rem;
+  --text-h1--line-height: 2rem;
+  --text-h2: 1.25rem;
+  --text-h2--line-height: 1.75rem;
+  --text-h3: 1rem;
+  --text-h3--line-height: 1.5rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.25rem;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+}
+
+/*
+ * Brand chamfer (cut corners). Only for readouts, the S-18 header, and empty-state panels.
+ * Size via [--chamfer-size:12px]; set it on every nested chamfer, since it inherits.
+ */
+@utility chamfer {
+  --chamfer: var(--chamfer-size, 8px);
+  clip-path: polygon(
+    var(--chamfer) 0,
+    calc(100% - var(--chamfer)) 0,
+    100% var(--chamfer),
+    100% calc(100% - var(--chamfer)),
+    calc(100% - var(--chamfer)) 100%,
+    var(--chamfer) 100%,
+    0 calc(100% - var(--chamfer)),
+    0 var(--chamfer)
+  );
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: color-mix(
+      in oklab,
+      var(--color-primary) 35%,
+      transparent
+    );
+    color: var(--color-text);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

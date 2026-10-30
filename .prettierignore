@@ -1,0 +1,11 @@
+# Source-of-truth files that must keep their authored formatting.
+brand/
+docs/
+.claude/
+CLAUDE.md
+AGENTS.md
+
+# Generated
+pnpm-lock.yaml
+drizzle/
+next-env.d.ts
