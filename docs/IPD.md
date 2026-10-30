@@ -16,7 +16,7 @@ Tanpa deadline; estimasi dalam jam kerja (solo + AI).
 
 ## Fase 1 - Fondasi
 
-- [ ] **1. Setup proyek**
+- [x] **1. Setup proyek**
   - Rujukan: TRD bagian 1, 3, 4, 6, 7
   - Kerjakan: inisialisasi Next.js 16 (TypeScript, App Router, Tailwind 4, ESLint, `src/`) dengan pnpm; TS `strict` + `noUncheckedIndexedAccess`; Prettier; Vitest + 1 tes contoh; Playwright + 1 smoke test; script `dev`, `build`, `start`, `lint`, `format`, `typecheck`, `test`, `test:e2e`; struktur folder TRD bagian 3; `.env.example`; `.gitignore` (termasuk `.data/`); workflow GitHub Actions (lint, typecheck, test, build); commit pertama.
   - Selesai jika: `pnpm dev` menampilkan halaman awal di `localhost:3000`; `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e` lolos.
@@ -174,4 +174,5 @@ Tanpa deadline; estimasi dalam jam kerja (solo + AI).
 ## Catatan & Utang Teknis
 <!-- Tambahkan: tanggal - langkah - catatan/keputusan -->
 - 2026-10-30 - init - Dokumen dibuat. Aset brand disimpan di `brand/` (sumber); penulisan nama diselaraskan ke "Fixmaster" di `logo.svg`, `icon-maskable.svg`, dan komentar `Mascot.tsx`. `brand/icons.svg` adalah sprite ikon sosial template Vite, bukan identitas brand.
+- 2026-10-30 - langkah 1 - Scaffold create-next-app 16.4.3 (Cache Components + Partial Prefetching aktif, Tailwind lewat loader Turbopack). `@playwright/test` dikunci 1.63.0 agar cocok dengan browser terpasang. `globals.css` dipindah ke `src/styles/`. `brand/` dan `.claude/` dikecualikan dari ESLint, tsc, dan Prettier. `AGENTS.md` dikelola `next dev` dan ikut di-commit.
 - 2026-10-30 - update - Asumsi dikonfirmasi user (PRD bagian 8). Perubahan: A-03 harga Rp 99.000/bulan atau Rp 990.000/tahun + kode unik transfer (`tenants.billing_code`); A-05 tanda tangan jadi pengaturan `require_signature` (default aktif); A-06 link berlaku 60 hari setelah garansi berakhir; A-12 Vercel Hobby dulu; A-13 klaim teknisi jadi pengaturan `technicians_can_claim` (default nonaktif).

@@ -22,6 +22,7 @@ Baca sebelum bekerja. Jangan menebak jika dokumen tidak menjelaskan; tanyakan.
 5. Sebelum menyatakan selesai: jalankan `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, dan cek "Selesai jika". Laporkan hasil apa adanya.
 6. Centang langkah di IPD hanya setelah terbukti lolos.
 7. Untuk pekerjaan UI, skill `impeccable` boleh dipakai, tetapi `docs/DBD.md` adalah sumber kebenaran token, komponen, dan aturan brand.
+8. Next.js 16.4 berbeda dari versi lama: baca panduan terkait di `node_modules/next/dist/docs/` sebelum menulis kode Next (lihat `AGENTS.md`). Cache Components aktif, jadi data dinamis dibaca di dalam `<Suspense>` dan jangan menambah export `runtime`.
 
 ## Perintah
 - Dev: `pnpm dev`

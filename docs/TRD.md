@@ -1,6 +1,6 @@
 # TRD - Fixmaster
 
-> Versi: 0.2 | Diperbarui: 2026-10-30 | Merujuk: PRD.md
+> Versi: 0.3 | Diperbarui: 2026-10-30 | Merujuk: PRD.md
 
 ## 1. Tech Stack
 | Lapisan | Pilihan | Alasan (1 kalimat) |
@@ -16,7 +16,7 @@
 | Hosting/Deploy | Lokal dulu; production Vercel Hobby `sin1` (pindah ke Pro setelah bisnis menghasilkan) + Supabase region Singapore [ASUMSI A-12] | Gratis di awal dan latensi rendah untuk Indonesia; batasan Hobby di bagian 9. |
 | Layanan pihak ketiga | WhatsApp via link `wa.me` (tanpa API) | Pilihan user; gratis dan tanpa risiko blokir nomor. |
 
-Versi runtime & package manager: Node.js 22 LTS atau lebih baru, pnpm. Test: Vitest 5, Playwright 1.64.
+Versi runtime & package manager: Node.js 22 LTS atau lebih baru, pnpm 10 (dikunci lewat `packageManager` di `package.json`). Test: Vitest 5, Playwright 1.63 (versi dikunci tepat; di mesin baru jalankan `pnpm exec playwright install chromium` sekali).
 
 ## 2. Arsitektur
 Satu aplikasi Next.js monolit. Halaman memakai Server Components untuk membaca data dan Server Actions untuk menulis. Semua akses data lewat fungsi di `src/server/services/` yang menerima `TenantContext` (`tenantId`, `userId`, `role`) dari sesi, bukan dari input klien. Pelanggan mengakses `/s/{token}` tanpa login. Driver database dipilih dari prefix `DATABASE_URL`.
@@ -35,6 +35,7 @@ flowchart LR
 Keputusan penting:
 | Keputusan | Alternatif ditolak | Alasan |
 |---|---|---|
+| Cache Components + Partial Prefetching aktif (bawaan create-next-app 16.4) | Model caching lama | Default Next 16.4. Konsekuensi: data dinamis (sesi, DB) dibaca di dalam `<Suspense>`, dan **tidak boleh** ada export `runtime` di route. |
 | Server Actions + service layer | REST API terpisah | Tidak ada klien lain; lebih sedikit kode dan type-safe end-to-end. |
 | Isolasi tenant di lapisan aplikasi + tes wajib | Row Level Security Supabase | RLS bergantung pada JWT Supabase Auth; kita memakai Better Auth dan koneksi server-side. |
 | Better Auth | Supabase Auth | Supabase Auth tidak tersedia lokal tanpa Docker dan memaksa penulisan ulang saat migrasi. |
