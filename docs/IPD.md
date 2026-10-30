@@ -1,6 +1,6 @@
 # IPD - Fixmaster
 
-> Versi: 0.2 | Diperbarui: 2026-10-30 | Merujuk: PRD, TRD, AFD, DBD, BSD
+> Versi: 0.3 | Diperbarui: 2026-10-30 | Merujuk: PRD, TRD, AFD, DBD, BSD
 
 ## Cara memakai
 Kerjakan **satu langkah per sesi**, berurutan (`/vibe-docs build`). Centang `[x]` hanya jika kriteria "Selesai jika" terbukti lolos. Jangan mengerjakan fitur di luar langkah yang aktif. Setiap langkah yang menambah service wajib menyertakan tes isolasi dua tenant (TRD bagian 4).
@@ -26,14 +26,15 @@ Tanpa deadline; estimasi dalam jam kerja (solo + AI).
   - Kerjakan: token semantik terang/gelap + token maskot di `src/styles/globals.css` dan dipetakan ke Tailwind; IBM Plex Sans/Mono via `next/font`; inisialisasi shadcn/ui dan beri token: Button, Input, Label, Badge (8 status), Card, Dialog, Toast, Skeleton, Readout; salin aset `brand/` ke `public/` sesuai DBD bagian 6; `src/components/brand/mascot.tsx` (dari `brand/Mascot.tsx`, logika tidak diubah) dan `logo.tsx`; `src/app/manifest.ts` + ikon di metadata; halaman `/dev/ui` (hanya development) yang menampilkan semua komponen dan maskot.
   - Selesai jika: Playwright screenshot `/dev/ui` dalam `prefers-color-scheme` light dan dark tersimpan dan diperiksa; `/manifest.webmanifest` berisi nama "Fixmaster" dan 4 ikon (2 `any`, 2 `maskable`); `/dev/ui` mengembalikan 404 di build production; lint & build lolos.
 
-- [ ] **3. Database & skema**
-  - Rujukan: BSD bagian 1-4, 7; TRD bagian 2, 4, 6, 9
-  - Kerjakan: pasang Drizzle ORM, drizzle-kit, `@electric-sql/pglite`, `postgres`; `src/server/db/client.ts` (driver dipilih dari prefix `DATABASE_URL`, singleton di `globalThis`); skema semua tabel + enum (termasuk tabel Better Auth sesuai BSD); `pnpm db:generate`, `scripts/migrate.ts` (`pnpm db:migrate`), `pnpm db:reset`; helper tes `createTestDb()` (PGlite in-memory + migrasi); `serverExternalPackages` di `next.config.ts`.
-  - Selesai jika: `pnpm db:reset` membuat database dari nol tanpa error; tes integrasi lolos: semua tabel ada, CHECK `lock_secret_enc`, CHECK `super_admin`/`tenant_id`, dan unique owner per toko menolak data yang melanggar.
+- [x] **3. Database & skema (Supabase)**
+  - Rujukan: BSD bagian 1-4, 7; TRD bagian 2, 4, 5, 6, 9; [ASUMSI A-18]
+  - Kerjakan: `supabase init` + `supabase/config.toml` (layanan yang tidak dipakai dimatikan, TRD bagian 6); script `pnpm db:start`, `pnpm db:stop`; pasang Drizzle ORM, drizzle-kit, `postgres` dan hapus `@electric-sql/pglite`; `drizzle.config.ts`; `src/server/db/client.ts` (postgres-js, `prepare: false`, `max: 1` di production, singleton di `globalThis`); skema semua tabel + enum (termasuk tabel Better Auth sesuai BSD) dengan RLS aktif tanpa policy; `pnpm db:generate`, `scripts/migrate.ts` (`pnpm db:migrate`, memakai `DIRECT_URL` jika terisi), `pnpm db:reset` (`supabase db reset` lalu migrasi, hanya lokal); helper tes `createTestDb()` (database per file tes dari template yang sudah dimigrasikan, menolak host non-lokal). Penyesuaian hasil langkah 1: `.env.example` dan `.env` (`DATABASE_URL` Supabase lokal), hapus `.data/` dari `.gitignore`, tambahkan `supabase/setup-cli` + `supabase db start` di workflow CI.
+  - Konfirmasi user sebelum mulai: membuang `drizzle/0000_chief_sentinel.sql` + `drizzle/meta/` (belum di-commit, dibuat tanpa RLS, sumber skemanya sudah tidak ada) dan folder `.data/` (40 MB data uji PGlite).
+  - Selesai jika: `pnpm db:start` lalu `pnpm db:reset` membuat database dari nol tanpa error; tes integrasi lolos: semua tabel ada, CHECK `lock_secret_enc`, CHECK `super_admin`/`tenant_id`, dan unique owner per toko menolak data yang melanggar; semua tabel `public` ber-RLS dan role `anon` tidak bisa membaca baris apa pun; `createTestDb()` menolak URL non-lokal. `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm build` lolos tanpa PGlite terpasang.
 
 - [ ] **4. Autentikasi & registrasi toko**
   - Rujukan: F-01, S-01, S-02, TRD bagian 5, BSD tabel `users`/`sessions`/`accounts` dan aksi `registerShop`
-  - Kerjakan: konfigurasi Better Auth (adapter Drizzle, `generateId: "uuid"`, `usePlural`, `additionalFields`, sesi 7 hari, rate limit penyimpanan database); `/api/auth/[...all]`; S-01 + `registerShop` (transaksi tenant + owner + account); S-02 login + logout; `getTenantContext()` dan `requireRole()` di `src/server/auth/`; guard layout `(app)`; `scripts/seed.ts` (`pnpm db:seed`) berisi data BSD bagian 7 (tiket seed tanpa kunci layar dulu).
+  - Kerjakan: konfigurasi Better Auth (adapter Drizzle, `generateId: "uuid"`, `usePlural`, `additionalFields`, sesi 7 hari, rate limit penyimpanan database); `/api/auth/[...all]`; S-01 + `registerShop` (transaksi tenant + owner + account); S-02 login + logout; `getTenantContext()` dan `requireRole()` di `src/server/auth/`; guard layout `(app)`; `scripts/seed.ts` (`pnpm db:seed`, hanya lokal) berisi data BSD bagian 7 (tiket seed tanpa kunci layar dulu); global setup Playwright untuk database `fixmaster_e2e` (TRD bagian 6).
   - Selesai jika: E2E: daftar toko baru -> tiba di `/dashboard`; tamu membuka `/dashboard` -> `/login`; password salah -> pesan F-01. Integrasi: `registerShop` membuat 1 tenant + 1 owner dengan `trial_ends_at` = +14 hari; `EMAIL_TAKEN`; user nonaktif ditolak login; login `owner@demo.test` dari seed berhasil.
 
 - [ ] **5. App shell & navigasi per peran**
@@ -146,10 +147,10 @@ Tanpa deadline; estimasi dalam jam kerja (solo + AI).
 - [ ] **26. Tes menyeluruh dan perbaikan bug**
   - Selesai jika: E2E alur lengkap (daftar -> terima unit -> estimasi via link -> part dari stok -> nota -> lunas -> diambil) lolos 3x berturut-turut di viewport mobile dan desktop; `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` lolos.
 
-- [ ] **27. Migrasi ke Supabase**
-  - Rujukan: TRD bagian 1, 6, 9; [ASUMSI A-11, A-12]
-  - Kerjakan: buat project Supabase production dan project terpisah untuk tes (region Singapore); isi `DATABASE_URL` (pooler 6543, `prepare: false`) dan `DIRECT_URL`; `pnpm db:migrate`; jalankan tes integrasi terhadap project tes; jalankan app lokal yang terhubung ke Supabase; buat super-admin production.
-  - Selesai jika: migrasi berjalan dari nol di Supabase; `pnpm test` lolos terhadap Postgres Supabase (project tes); app lokal + Supabase: daftar toko -> terima unit -> halaman status publik berjalan.
+- [ ] **27. Siapkan Supabase production**
+  - Rujukan: TRD bagian 1, 5, 6, 9; [ASUMSI A-11, A-12, A-18]
+  - Kerjakan: buat project Supabase production (region Singapore) dan matikan Data API; isi `DATABASE_URL` (shared pooler 6543) dan `DIRECT_URL`; `pnpm db:migrate`; jalankan app lokal yang terhubung ke project production; buat super-admin production.
+  - Selesai jika: migrasi berjalan dari nol di project hosted; semua tabel `public` ber-RLS; endpoint REST project tidak melayani data; app lokal + project hosted: daftar toko -> terima unit -> halaman status publik berjalan.
 
 - [ ] **28. Deploy** (TRD bagian 6) dan cek asap di production
   - Kerjakan: project Vercel Hobby (region `sin1`) terhubung ke GitHub [ASUMSI A-12]; environment variable production; domain + `APP_URL`; deploy.
@@ -164,8 +165,9 @@ Tanpa deadline; estimasi dalam jam kerja (solo + AI).
 ## Risiko
 | Risiko | Dampak | Mitigasi |
 |---|---|---|
-| PGlite terkunci saat dev server dan skrip DB berjalan bersamaan | Migrasi/seed gagal | Hentikan `pnpm dev` dulu (TRD bagian 6) |
-| Perbedaan PGlite vs Postgres Supabase | Bug baru muncul saat migrasi | Hanya fitur Postgres standar; tes integrasi terhadap Supabase di langkah 27 |
+| Docker Desktop belum menyala | `pnpm dev`, `pnpm test`, dan skrip DB gagal terhubung | Nyalakan Docker Desktop lalu `pnpm db:start` (TRD bagian 6) |
+| Perbedaan Supabase lokal vs hosted | Bug baru muncul di production | Versi Postgres disamakan di `config.toml`; cek asap terhadap project hosted di langkah 27 |
+| Skrip tes/seed mengarah ke production | Data production rusak | Pengaman host lokal di `createTestDb()`, `db:seed`, `db:reset` (TRD bagian 5) |
 | Kebocoran data lintas toko | Fatal untuk SaaS B2B | Pola `TenantContext`, tes isolasi per service, audit langkah 25 |
 | Scope melebar (11 fitur P0) | Rilis molor | Patuhi "Di Luar Scope" PRD; ide baru dicatat di bawah, bukan dikerjakan |
 | Printer thermal toko bervariasi | Cetakan terpotong | 3 format cetak + uji cetak ke PDF; pilot dengan printer nyata |
@@ -182,4 +184,7 @@ Tanpa deadline; estimasi dalam jam kerja (solo + AI).
 - 2026-10-30 - critique - SELESAI: tombol loading memakai `disabled:opacity-50` sehingga terlihat seperti nonaktif (ganti ke `disabled:not-aria-busy:opacity-50`); chamfer Readout dan panel kosong hampir hilang di mode gelap (beri bingkai chamfer `--volt-edge`, jadikan `EmptyState` komponen di atas `surface`). Keduanya sudah dikerjakan.
 - 2026-10-30 - critique - SELESAI (catatan kecil): placeholder harus berupa contoh format, bukan nilai mirip data asli; nilai yang hanya dibaca memakai `readOnly`/Readout, bukan `disabled`; `CardTitle` perlu jadi heading saat dipakai di S-04; warna seleksi teks (`::selection`) belum diberi token; Plex Mono 700 untuk "V-01" maskot belum dimuat (bold palsu). Semua sudah dikerjakan, ditambah `Field`, `MoneyInput`, `src/lib/money.ts`, hover `danger-hover`, `text-wrap`, dan kit `/dev/ui` yang menuliskan aturan pemakaian. Detector live: 0 temuan. Diputuskan tetap: badge 12px (agar "Menunggu persetujuan" tidak terbungkus di kartu), tombol X dialog terakhir dalam urutan Tab (pola Radix; fokus awal tetap di field pertama), shortcut keyboard belum ada karena belum ada fitur di PRD.
 - 2026-10-30 - langkah 2 - SELESAI: toast error kini diumumkan lewat region `role="alert"` milik `Toaster` (sonner tetap `polite` untuk sukses/info).
+- 2026-10-30 - update - Langkah 3 pindah ke Supabase [ASUMSI A-18]: Supabase lokal untuk dev dan tes, hosted untuk production; PGlite dibatalkan; Better Auth tetap; login Google tetap di luar scope. Langkah 27 berubah dari migrasi menjadi penyiapan project production (ID tetap). Langkah 1 tidak dibuka ulang; penyesuaiannya (`.env.example`, `.gitignore`, CI) masuk langkah 3. RLS tanpa policy dan Data API mati ditambahkan karena Fixmaster tidak memakai Data API.
+- 2026-10-30 - langkah 3 - SELESAI. 14 tabel + RLS di migrasi `0000_sweet_thundra.sql`; kolom `bigint` memakai mode number agar cocok dengan `src/lib/money.ts`. `getDb()` dibuat lazy agar build tidak butuh database. Vitest dibagi project `unit` dan `integration`. Global setup menghapus `Error.prepareStackTrace` karena module runner Vite crash saat memetakan stack (kode modul diterima sebagai Buffer); hapus baris itu setelah Vite/Vitest memperbaikinya. Entri PGlite di lockfile dibuang manual karena pnpm mempertahankannya sebagai peer opsional drizzle-orm. Workflow CI dengan `supabase db start` belum terbukti sampai di-push.
+- 2026-10-30 - update - Sisa pekerjaan langkah 3 versi PGlite di working tree tidak utuh: `drizzle/0000_chief_sentinel.sql`, dependensi, dan script `package.json` ada, tetapi `src/server/db/schema/`, `drizzle.config.ts`, dan `scripts/migrate.ts` tidak ada. Skema dibuat ulang dari BSD.
 - 2026-10-30 - update - Asumsi dikonfirmasi user (PRD bagian 8). Perubahan: A-03 harga Rp 99.000/bulan atau Rp 990.000/tahun + kode unik transfer (`tenants.billing_code`); A-05 tanda tangan jadi pengaturan `require_signature` (default aktif); A-06 link berlaku 60 hari setelah garansi berakhir; A-12 Vercel Hobby dulu; A-13 klaim teknisi jadi pengaturan `technicians_can_claim` (default nonaktif).

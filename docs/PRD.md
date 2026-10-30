@@ -1,6 +1,6 @@
 # PRD - Fixmaster
 
-> Versi: 0.2 | Diperbarui: 2026-10-30 | Status: Draft (asumsi dikonfirmasi, lihat bagian 8)
+> Versi: 0.3 | Diperbarui: 2026-10-30 | Status: Draft (asumsi dikonfirmasi, lihat bagian 8)
 
 ## 1. Ringkasan
 Fixmaster adalah SaaS B2B (web responsive + PWA) untuk toko reparasi laptop, handphone, tablet, dan perangkat elektronik lain di Indonesia. Fixmaster mencatat seluruh perjalanan unit servis: penerimaan unit dengan tanda tangan pelanggan, pengerjaan oleh teknisi, estimasi yang disetujui pelanggan lewat link, pemakaian sparepart dari stok, sampai nota, pembayaran, dan pengambilan. Pelanggan memantau status lewat link yang dikirim via WhatsApp. Nilai utamanya: toko tidak lagi kehilangan jejak unit, uang, dan stok, dan pelanggan tidak perlu menelepon untuk menanyakan progres.
@@ -152,13 +152,14 @@ Daftar asumsi & keputusan (satu-satunya daftar; tag `[ASUMSI A-xx]` di dokumen l
 | A-08 | Tanpa PPN; semua harga dalam Rupiah bulat. | Dikonfirmasi |
 | A-09 | Target metrik sukses di bagian 3 untuk fase pilot. | Dikonfirmasi |
 | A-10 | Font IBM Plex Sans + IBM Plex Mono; referensi visual di DBD bagian 1. | Dikonfirmasi |
-| A-11 | Data di database lokal (PGlite) hanya data uji; tidak dimigrasikan ke Supabase. | Dikonfirmasi |
+| A-11 | Data di Supabase lokal hanya data uji; tidak dipindahkan ke project production. | Dikonfirmasi |
 | A-12 | Production di Vercel Hobby (region `sin1`) dulu, pindah ke Vercel Pro setelah bisnis menghasilkan; Supabase region Singapore. Batasan Hobby: TRD bagian 9. | Dikonfirmasi |
 | A-13 | Owner/admin menugaskan teknisi. Owner bisa mengaktifkan "Teknisi boleh mengambil tiket sendiri" di Pengaturan (default nonaktif). | Dikonfirmasi |
 | A-14 | Stok berkurang saat part ditambahkan ke tiket (bukan saat disetujui) dan kembali saat item dihapus atau tiket dibatalkan. | Dikonfirmasi |
 | A-15 | Format cetak: thermal 58 mm, thermal 80 mm, dan A4, via cetak browser. | Dikonfirmasi |
 | A-16 | Zona waktu default `Asia/Jakarta`, bisa diganti per toko. | Dikonfirmasi |
 | A-17 | Tanpa reset password via email: owner mereset password staf, super-admin mereset password owner. | Dikonfirmasi |
+| A-18 | Supabase dipakai sejak awal: lokal (Supabase CLI + Docker Desktop) untuk dev dan tes, hosted untuk production. PGlite tidak dipakai. Auth tetap Better Auth. | Dikonfirmasi user 2026-10-30 |
 
 Risiko -> mitigasi:
 - Pelanggan tidak membuka link status -> link juga tercetak sebagai QR di tanda terima; tombol WA berisi ringkasan status.
@@ -166,7 +167,7 @@ Risiko -> mitigasi:
 - Kebocoran data antar toko -> semua query lewat service ber-`tenant_id` + tes isolasi wajib (TRD bagian 4).
 - Kunci layar pelanggan bocor -> enkripsi, akses terbatas, log setiap pembukaan, hapus otomatis saat diambil.
 
-Dependensi: WhatsApp (link `wa.me`, tanpa API), Supabase (Postgres production), Vercel (hosting).
+Dependensi: WhatsApp (link `wa.me`, tanpa API), Supabase (Postgres: lokal untuk dev/tes, hosted untuk production), Docker Desktop (pengembangan), Vercel (hosting).
 
 ## 9. Pertanyaan Terbuka
 - Rekening tujuan transfer langganan (bank, nomor, atas nama) untuk S-17 (A-03)?

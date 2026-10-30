@@ -1,6 +1,6 @@
 # TRD - Fixmaster
 
-> Versi: 0.4 | Diperbarui: 2026-10-30 | Merujuk: PRD.md
+> Versi: 0.5 | Diperbarui: 2026-10-30 | Merujuk: PRD.md
 
 ## 1. Tech Stack
 | Lapisan | Pilihan | Alasan (1 kalimat) |
@@ -8,18 +8,18 @@
 | Frontend | Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4 | Pilihan user; satu bahasa untuk UI dan server, dan `brand/Mascot.tsx` langsung dipakai. |
 | Komponen UI | shadcn/ui (Radix) + sonner (toast) + ikon lucide-react | Primitif aksesibel (dialog, select, combobox) yang kodenya disalin ke repo dan diberi token DBD. |
 | Backend | Next.js Server Actions + Route Handlers, logika di `src/server/` | Tidak ada konsumen API eksternal, jadi tidak perlu server terpisah. |
-| Database | Postgres: lokal **PGlite** (file `.data/pglite`), production **Supabase Postgres** | Pilihan user; mesin SQL yang sama sehingga migrasi cukup mengganti `DATABASE_URL`. |
-| ORM/migrasi | Drizzle ORM 0.45 + drizzle-kit (file SQL di `drizzle/`) | Mendukung driver PGlite dan postgres-js dengan skema yang sama. |
-| Auth | Better Auth 1.7 (email + password), adapter Drizzle | Data auth tersimpan di Postgres kita sendiri, jadi tidak perlu ditulis ulang saat pindah ke Supabase. |
+| Database | **Supabase Postgres**: lokal via Supabase CLI + Docker Desktop, production hosted [ASUMSI A-18] | Pilihan user; mesin yang sama di semua environment, jadi tidak ada tahap migrasi database di akhir. |
+| ORM/migrasi | Drizzle ORM 0.45 + drizzle-kit (file SQL di `drizzle/`) + driver `postgres` (postgres-js) | Query type-safe dengan satu driver di semua environment; pola resmi Drizzle untuk Supabase. |
+| Auth | Better Auth 1.7 (email + password), adapter Drizzle | Akun tersimpan di tabel kita sendiri, jadi registrasi toko satu transaksi dan sesi bisa dicabut langsung. |
 | Validasi | Zod 4 | Satu skema untuk validasi form dan Server Action. |
 | Lainnya | `signature_pad` (tanda tangan), `qrcode` (QR status), `node:crypto` (AES-256-GCM) | Kecil, tanpa layanan eksternal. |
 | Hosting/Deploy | Lokal dulu; production Vercel Hobby `sin1` (pindah ke Pro setelah bisnis menghasilkan) + Supabase region Singapore [ASUMSI A-12] | Gratis di awal dan latensi rendah untuk Indonesia; batasan Hobby di bagian 9. |
 | Layanan pihak ketiga | WhatsApp via link `wa.me` (tanpa API) | Pilihan user; gratis dan tanpa risiko blokir nomor. |
 
-Versi runtime & package manager: Node.js 22 LTS atau lebih baru, pnpm 10 (dikunci lewat `packageManager` di `package.json`). Test: Vitest 5, Playwright 1.63 (versi dikunci tepat; di mesin baru jalankan `pnpm exec playwright install chromium` sekali).
+Versi runtime & package manager: Node.js 22 LTS atau lebih baru, pnpm 10 (dikunci lewat `packageManager` di `package.json`). Test: Vitest 5, Playwright 1.63 (versi dikunci tepat; di mesin baru jalankan `pnpm exec playwright install chromium` sekali). Prasyarat pengembangan: Docker Desktop dan Supabase CLI 2.114 (terpasang global, di CI dikunci lewat `supabase/setup-cli`).
 
 ## 2. Arsitektur
-Satu aplikasi Next.js monolit. Halaman memakai Server Components untuk membaca data dan Server Actions untuk menulis. Semua akses data lewat fungsi di `src/server/services/` yang menerima `TenantContext` (`tenantId`, `userId`, `role`) dari sesi, bukan dari input klien. Pelanggan mengakses `/s/{token}` tanpa login. Driver database dipilih dari prefix `DATABASE_URL`.
+Satu aplikasi Next.js monolit. Halaman memakai Server Components untuk membaca data dan Server Actions untuk menulis. Semua akses data lewat fungsi di `src/server/services/` yang menerima `TenantContext` (`tenantId`, `userId`, `role`) dari sesi, bukan dari input klien. Pelanggan mengakses `/s/{token}` tanpa login. Aplikasi terhubung ke Postgres lewat connection string dari server; klien tidak pernah mengakses database langsung.
 
 ```mermaid
 flowchart LR
@@ -27,7 +27,7 @@ flowchart LR
   Plg[Pelanggan<br/>/s/token] --> App
   App --> Auth[Better Auth<br/>/api/auth/*]
   App --> Svc[src/server/services<br/>scoped tenant_id]
-  Auth --> DB[(Postgres<br/>lokal: PGlite<br/>prod: Supabase)]
+  Auth --> DB[(Supabase Postgres<br/>lokal: CLI + Docker<br/>prod: hosted)]
   Svc --> DB
   Staf -. link wa.me .-> WA[WhatsApp]
 ```
@@ -37,9 +37,11 @@ Keputusan penting:
 |---|---|---|
 | Cache Components + Partial Prefetching aktif (bawaan create-next-app 16.4) | Model caching lama | Default Next 16.4. Konsekuensi: data dinamis (sesi, DB) dibaca di dalam `<Suspense>`, dan **tidak boleh** ada export `runtime` di route. |
 | Server Actions + service layer | REST API terpisah | Tidak ada klien lain; lebih sedikit kode dan type-safe end-to-end. |
-| Isolasi tenant di lapisan aplikasi + tes wajib | Row Level Security Supabase | RLS bergantung pada JWT Supabase Auth; kita memakai Better Auth dan koneksi server-side. |
-| Better Auth | Supabase Auth | Supabase Auth tidak tersedia lokal tanpa Docker dan memaksa penulisan ulang saat migrasi. |
-| PGlite lokal | Postgres Docker, SQLite | Pilihan user (tanpa install); SQLite berbeda dialek dari Supabase. |
+| Isolasi tenant di lapisan aplikasi + tes wajib | RLS per tenant | RLS per tenant bergantung pada JWT Supabase Auth; kita memakai Better Auth dan koneksi server-side. RLS tetap diaktifkan tanpa policy, hanya untuk menutup akses Data API (bagian 5). |
+| Better Auth | Supabase Auth | Toko, owner, dan akun dibuat dalam satu transaksi; menonaktifkan staf langsung berlaku (F-02), sedangkan access token Supabase bisa bertahan sampai kedaluwarsa; tanpa sinkronisasi `auth.users` ke `users`. |
+| Drizzle + koneksi Postgres | `supabase-js` + Data API | Semua data lewat service di server; Data API tidak dipakai dan dimatikan di production. |
+| Supabase lokal untuk dev & tes | PGlite, Supabase hosted untuk dev | Postgres sama dengan production, tes konkurensi nyata, gratis, dan tidak memakai jatah 2 project aktif tier Free. |
+| Migrasi dimiliki Drizzle (`drizzle/`) | `supabase/migrations/` | Skema TypeScript tetap satu sumber kebenaran; folder `supabase/` hanya berisi konfigurasi lokal. |
 | Tanda tangan disimpan sebagai teks SVG di DB | Object storage | Tidak ada upload file di MVP; data kecil (maks 50 KB). |
 | Cetak via halaman HTML + CSS `@page` | Library PDF | Printer thermal & A4 cukup dengan dialog cetak browser. |
 | Uang `bigint` Rupiah bulat | `numeric` / float | Rupiah tidak memakai desimal; bebas error pembulatan. |
@@ -51,6 +53,7 @@ docs/                     # PRD, TRD, AFD, DBD, BSD, IPD
 drizzle/                  # file migrasi SQL hasil drizzle-kit (di-commit)
 public/                   # favicon.svg, logo.svg, icons/*.png (disalin dari brand/)
 scripts/                  # migrate.ts, seed.ts, create-super-admin.ts (dijalankan via tsx)
+supabase/                 # config.toml Supabase lokal (tanpa migrasi; migrasi ada di drizzle/)
 src/
   app/
     (auth)/               # login, register, change-password
@@ -67,14 +70,14 @@ src/
     tickets/ customers/ parts/ ...   # komponen per fitur
   lib/                    # util murni: money.ts, phone.ts, wa.ts, dates.ts, logger.ts
   server/
-    db/                   # client.ts, schema/*.ts
+    db/                   # client.ts, url.ts (pengaman host lokal), schema/*.ts
     auth/                 # auth.ts (konfigurasi Better Auth), context.ts, guards.ts
     services/             # tickets.ts, customers.ts, parts.ts, payments.ts, reports.ts, ...
     actions/              # Server Actions (tipis: validasi -> service)
     crypto/               # device-secret.ts
   styles/globals.css      # token DBD (CSS variables) + Tailwind
 tests/
-  unit/  integration/  e2e/
+  unit/  integration/  e2e/  helpers/
 ```
 
 ## 4. Konvensi Kode
@@ -84,6 +87,7 @@ tests/
 - Validasi input: skema Zod di setiap Server Action sebelum memanggil service.
 - Penanganan error: Server Action mengembalikan `ActionResult<T>` = `{ ok: true, data }` atau `{ ok: false, error: { code, message, fields? } }`; kode error mengikuti BSD bagian 6. Error tak terduga dicatat lewat `logger.error` dan ditampilkan sebagai "Terjadi kesalahan, coba lagi."
 - Konkurensi: update tiket menyertakan `updated_at` yang dibaca klien; jika tidak cocok kembalikan `CONFLICT`.
+- Transaksi: di dalam `db.transaction()` semua query wajib memakai `tx`, bukan `db` (dengan `max: 1` query lewat `db` akan menggantung). Jangan memakai fitur sesi Postgres (`SET`, advisory lock sesi, `LISTEN`) karena tidak didukung pooler mode transaction.
 - Uang: integer Rupiah; format dengan `formatRupiah()` di `src/lib/money.ts`. Tanggal: simpan `timestamptz` (UTC), tampilkan dengan zona waktu toko via `Intl.DateTimeFormat('id-ID')`.
 - Komponen UI: primitif ada di `src/components/ui/`, berbasis shadcn `new-york-v4` (Radix). Menambah komponen baru: `pnpm dlx shadcn add <nama>`, atau salin dari `apps/v4/registry/new-york-v4/ui/` di repo GitHub `shadcn-ui/ui` jika `ui.shadcn.com` tidak bisa diakses. Setelah itu kelas diganti ke token DBD: `bg-background`/`bg-card` -> `bg-background`/`bg-surface`; `bg-popover` -> `bg-surface-raised`; `bg-accent`/`bg-muted`/`bg-secondary` -> `bg-surface-sunken` (**`accent` di DBD = teal info, bukan warna hover**); `text-foreground` -> `text-text`; `text-muted-foreground` -> `text-text-muted`; `text-primary-foreground` -> `text-on-primary`; `border-input` -> `border-border-strong`; `destructive` -> `danger`. Hapus `outline-none`/`ring-*` fokus (fokus global di `globals.css`), dan jangan biarkan CLI mengubah token di `globals.css`.
 - Lint/format: ESLint (`eslint-config-next`) + Prettier -> `pnpm lint`, `pnpm format`; cek tipe `pnpm typecheck`.
@@ -96,30 +100,32 @@ tests/
 - Data sensitif: `tickets.lock_secret_enc` dienkripsi AES-256-GCM dengan kunci `DEVICE_SECRET_KEY` (32 byte, base64), format `v1:{iv}:{tag}:{ciphertext}`. Token status publik = 16 byte acak (`base64url`, 22 karakter).
 - Header: `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options: nosniff`; halaman `/s/*` dan `/print/*` diberi `noindex`.
 - Secrets: lewat environment variable, daftar di `.env.example`.
+- Supabase: aplikasi terhubung sebagai role `postgres` (pemilik tabel, tidak terkena RLS). Semua tabel `public` memakai RLS tanpa policy (`.enableRLS()` di skema Drizzle), sehingga `anon` dan `authenticated` tidak mendapat baris apa pun. Data API dimatikan di project production. API key Supabase (anon/publishable, service role) tidak dipakai dan tidak disimpan.
+- Pengaman data: `createTestDb()`, `pnpm db:seed`, dan `pnpm db:reset` hanya berjalan terhadap Postgres lokal (`127.0.0.1`/`localhost`); host lain ditolak.
 
 ## 6. Environment & Deploy
 | Env | Tujuan | Catatan |
 |---|---|---|
-| local | pengembangan | PGlite di `.data/pglite` (di-`.gitignore`); `pnpm db:reset` untuk mulai bersih. |
-| test | Vitest & Playwright | Vitest: PGlite in-memory per file tes + migrasi. Playwright: `pnpm build && pnpm start` dengan direktori PGlite sementara. |
-| production | pengguna nyata | Vercel Hobby (`sin1`), lalu Pro setelah bisnis menghasilkan, + Supabase Postgres Singapore; dibuat di IPD Fase 4 [ASUMSI A-11, A-12]. |
+| local | pengembangan | Supabase lokal (`pnpm db:start`, Docker Desktop harus menyala); `pnpm db:reset` untuk mulai bersih. Studio di `http://localhost:54323`. |
+| test | Vitest & Playwright | Vitest: satu database per file tes, disalin dari database template yang sudah dimigrasikan, di Supabase lokal. Playwright: `pnpm build && pnpm start` terhadap database `fixmaster_e2e` di Supabase lokal (dibuat ulang, migrasi, seed di global setup). |
+| production | pengguna nyata | Vercel Hobby (`sin1`), lalu Pro setelah bisnis menghasilkan, + Supabase hosted Singapore; dibuat di IPD langkah 27 [ASUMSI A-11, A-12]. |
 
 Variabel lingkungan (`.env.example`):
 | Nama | Contoh lokal | Keterangan |
 |---|---|---|
-| `DATABASE_URL` | `file:./.data/pglite` | `file:` -> driver PGlite; `postgres://` -> driver postgres-js (Supabase transaction pooler port 6543, `prepare: false`). |
-| `DIRECT_URL` | (kosong) | Hanya production: koneksi langsung port 5432 untuk menjalankan migrasi. |
+| `DATABASE_URL` | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` | Lokal: Supabase lokal. Production: shared pooler mode transaction (`aws-[INDEX]-[REGION].pooler.supabase.com:6543`, user `postgres.[PROJECT-REF]`, SSL wajib). Klien selalu `prepare: false`; `max: 1` di production. |
+| `DIRECT_URL` | (kosong) | Hanya production, untuk migrasi: koneksi langsung `db.[PROJECT-REF].supabase.co:5432` (IPv6), atau shared pooler mode session port 5432 jika jaringan hanya IPv4. Kosong -> migrasi memakai `DATABASE_URL`. |
 | `BETTER_AUTH_SECRET` | string acak 32+ karakter | Wajib. |
 | `BETTER_AUTH_URL` / `APP_URL` | `http://localhost:3000` | `APP_URL` dipakai untuk link status `{APP_URL}/s/{token}`. |
 | `DEVICE_SECRET_KEY` | base64 32 byte | Kunci enkripsi kunci layar; kehilangan kunci = data kunci layar tidak bisa dibaca. |
 
-Catatan PGlite: satu direktori data hanya bisa dibuka satu proses. Hentikan `pnpm dev` sebelum `pnpm db:migrate`/`db:seed`/`db:reset`. Instance PGlite disimpan di `globalThis` agar HMR tidak membuka instance ganda, dan `@electric-sql/pglite` dimasukkan ke `serverExternalPackages` di `next.config.ts`.
+Catatan Supabase lokal: nyalakan Docker Desktop lalu `pnpm db:start` sebelum `pnpm dev`, `pnpm test`, atau skrip database. `supabase/config.toml` mematikan layanan yang tidak dipakai (auth, storage, realtime, edge functions, analytics, email) dan menyamakan versi Postgres dengan production. Klien database disimpan di `globalThis` agar HMR tidak membuka koneksi ganda.
 
-CI/CD: GitHub Actions menjalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` pada setiap push/PR. Deploy production via integrasi Git Vercel (IPD langkah 28).
+CI/CD: GitHub Actions menjalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` pada setiap push/PR; sebelum `pnpm test`, `supabase/setup-cli` memasang CLI dan `supabase db start` menyalakan Postgres lokal, sehingga CI tidak butuh secret database. Deploy production via integrasi Git Vercel (IPD langkah 28).
 
 ## 7. Strategi Testing
 - Unit (Vitest): fungsi murni di `src/lib/` dan aturan domain: normalisasi nomor WA, format Rupiah, matriks transisi status, total & sisa bayar, builder link WA, enkripsi kunci layar (round-trip + ciphertext berbeda tiap kali).
-- Integrasi (Vitest + PGlite in-memory): service dengan database nyata, termasuk penomoran tiket/nota per toko, mutasi stok, aturan pengambilan unit, angka laporan, dan **isolasi dua tenant** untuk setiap service.
+- Integrasi (Vitest + Supabase lokal, helper `createTestDb()`): service dengan database nyata, termasuk penomoran tiket/nota per toko, mutasi stok, transaksi bersamaan, aturan pengambilan unit, angka laporan, dan **isolasi dua tenant** untuk setiap service.
 - E2E (Playwright, Chromium, viewport 390x844 dan 1280x800): registrasi -> terima unit -> estimasi disetujui via link -> nota -> lunas -> diambil; akses per peran; halaman status publik.
 - Aksesibilitas: `@axe-core/playwright` di E2E (IPD langkah 24); performa: Lighthouse preset mobile.
 - Perintah standar: `pnpm test`, `pnpm test:e2e`, `pnpm lint`, `pnpm typecheck`, `pnpm build`.
@@ -130,10 +136,12 @@ CI/CD: GitHub Actions menjalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`, `p
 - Observability: `src/lib/logger.ts` menulis log JSON (level, pesan, `tenantId`, `userId`, tanpa data pribadi/kunci layar) ke stdout -> log Vercel. Halaman `error.tsx` dan `not-found.tsx` khusus.
 
 ## 9. Risiko Teknis
-- PGlite berperilaku sedikit berbeda dari Postgres server -> hanya fitur Postgres standar (tanpa extension); jalankan tes integrasi terhadap Supabase sebelum go-live (IPD langkah 27).
-- Bundling WASM PGlite di Next.js -> `serverExternalPackages`; semua rute data memakai runtime Node (bukan Edge).
-- Koneksi berlebih dari serverless ke Supabase -> transaction pooler (port 6543) dengan `prepare: false`.
+- Supabase lokal butuh Docker Desktop -> jika menyala terlambat, `pnpm test` dan `pnpm dev` gagal terhubung; nyalakan dulu lalu `pnpm db:start`.
+- Supabase lokal berbeda dari hosted -> versi Postgres disamakan di `config.toml`; cek asap terhadap project hosted di IPD langkah 27.
+- Tabel `public` terjangkau Data API jika punya grant dan RLS mati -> sejak 30 Okt 2026 Supabase tidak lagi memberi grant otomatis ke tabel baru, tetapi kita tetap mengaktifkan RLS di migrasi dan mematikan Data API (bagian 5), dan tes memastikan tidak ada tabel tanpa RLS.
+- Koneksi berlebih dari serverless ke Supabase -> shared pooler mode transaction (port 6543) dengan `prepare: false` dan `max: 1`.
+- Koneksi langsung Supabase hanya IPv6 pada tier Free dan Pro -> Vercel memakai pooler; migrasi dari jaringan IPv4 memakai pooler mode session (bagian 6).
 - Pembaruan Better Auth mengubah skema -> versi dikunci di `package.json`; jalankan generator skema Better Auth lalu bandingkan sebelum upgrade.
 - Vercel Hobby hanya untuk penggunaan non-komersial dan kuotanya lebih kecil [ASUMSI A-12] -> pindah ke Vercel Pro paling lambat saat toko pertama membayar langganan; pantau pemakaian di dashboard Vercel.
-- Supabase tier Free menjeda project setelah 7 hari tanpa aktivitas dan tidak menyertakan backup harian yang bisa dipulihkan -> naik ke tier Pro bersamaan dengan Vercel Pro, atau sementara jalankan `pg_dump` terjadwal.
+- Supabase tier Free dibatasi 2 project aktif dan 500 MB, menjeda project setelah 7 hari tanpa aktivitas, dan tidak menyertakan backup otomatis -> naik ke tier Pro bersamaan dengan Vercel Pro, atau sementara jalankan `pg_dump` terjadwal.
 - Kehilangan `DEVICE_SECRET_KEY` -> simpan di password manager owner proyek; nilai kunci layar memang bersifat sementara (dihapus saat diambil).

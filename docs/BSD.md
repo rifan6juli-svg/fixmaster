@@ -1,7 +1,7 @@
 # BSD - Fixmaster
 
-> Versi: 0.2 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, TRD.md, AFD.md
-> Database: PostgreSQL (lokal PGlite, production Supabase) | ORM/migrasi: Drizzle ORM + drizzle-kit (`drizzle/`)
+> Versi: 0.3 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, TRD.md, AFD.md
+> Database: Supabase Postgres (lokal via CLI, production hosted) | ORM/migrasi: Drizzle ORM + drizzle-kit (`drizzle/`)
 
 ## 1. ERD
 ```mermaid
@@ -30,6 +30,7 @@ erDiagram
 - Soft delete: tidak. Users dan parts memakai `is_active`; tiket tidak pernah dihapus (status `cancelled`); pembayaran tidak bisa diubah/dihapus (koreksi lewat `refund`).
 - Uang: `bigint` Rupiah bulat (tanpa desimal). Waktu: `timestamptz` UTC.
 - Nomor urut per toko (`ticket_seq`, `invoice_seq`) dinaikkan dengan `UPDATE tenants SET x = x + 1 ... RETURNING` di dalam transaksi yang sama dengan insert.
+- RLS: setiap tabel di schema `public`, termasuk tabel Better Auth, diaktifkan RLS tanpa policy (`.enableRLS()` di skema Drizzle) agar `anon` dan `authenticated` tidak mendapat baris apa pun. Isolasi antar toko tetap di service (bagian 5), bukan di RLS.
 
 ## 3. Tabel
 
@@ -320,8 +321,8 @@ Format error standar: `{ "ok": false, "error": { "code": "INSUFFICIENT_STOCK", "
 
 ## 7. Migrasi & Seed
 - Urutan migrasi: enum -> `tenants` -> `users` + tabel Better Auth -> `customers` -> `parts` -> `tickets` -> `ticket_items` -> `ticket_events` -> `payments` -> `stock_movements` -> `subscription_logs`.
-- Migrasi dibuat dengan `pnpm db:generate` (drizzle-kit) dan dijalankan dengan `pnpm db:migrate` (lokal: PGlite; production: `DIRECT_URL`). File di `drizzle/` tidak boleh diubah setelah di-commit; perubahan = migrasi baru.
-- Data seed (dev, `pnpm db:seed`, deterministik):
+- Migrasi dibuat dengan `pnpm db:generate` (drizzle-kit) dan dijalankan dengan `pnpm db:migrate` (lokal: `DATABASE_URL` ke Supabase lokal; production: `DIRECT_URL`). File di `drizzle/` tidak boleh diubah setelah di-commit; perubahan = migrasi baru. Folder `supabase/migrations/` tidak dipakai.
+- Data seed (dev, `pnpm db:seed`, deterministik; hanya berjalan terhadap Postgres lokal, TRD bagian 5):
   - Toko "Toko Demo Servis" (prefix `SRV`, trial aktif) dengan `owner@demo.test`, `admin@demo.test`, `teknisi@demo.test`, `teknisi2@demo.test` (password `password123`, hanya dev).
   - 8 pelanggan, 10 part (2 di bawah stok minimum), 12 tiket mencakup kedelapan status lengkap dengan item, pembayaran, dan event.
   - Toko kedua "Toko Lain" dengan 1 owner, 1 teknisi, dan 2 tiket (untuk uji isolasi), memakai `require_signature = false` dan `technicians_can_claim = true` agar kedua mode pengaturan teruji.
@@ -330,4 +331,4 @@ Format error standar: `{ "ok": false, "error": { "code": "INSUFFICIENT_STOCK", "
 ## 8. Kebijakan Data
 - Retensi: data tiket, pelanggan, dan pembayaran disimpan selama toko terdaftar. Penghapusan toko dilakukan manual oleh super-admin atas permintaan owner (tidak ada fitur UI di MVP).
 - Data sensitif/PII: `customers.name`, `customers.phone_wa`, `tickets.serial_or_imei` (S-18 hanya 4 karakter akhir), `tickets.signature_svg`, `tickets.lock_secret_enc` (terenkripsi, dihapus saat `picked_up`), `users.email`. Tidak boleh muncul di log.
-- Backup: production memakai backup Supabase sesuai tier (tier Free: lihat risiko TRD bagian 9); data lokal PGlite adalah data uji [ASUMSI A-11].
+- Backup: production memakai backup Supabase sesuai tier (tier Free: lihat risiko TRD bagian 9); data di Supabase lokal adalah data uji [ASUMSI A-11].
