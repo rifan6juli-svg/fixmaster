@@ -1,6 +1,6 @@
 # AFD - Fixmaster
 
-> Versi: 0.1 | Diperbarui: 2026-10-30 | Merujuk: PRD.md (ID fitur F-xx)
+> Versi: 0.2 | Diperbarui: 2026-10-30 | Merujuk: PRD.md (ID fitur F-xx)
 
 ## 1. Peta Layar
 | ID | Layar | Rute/URL | Akses | Fitur terkait |
@@ -11,7 +11,7 @@
 | S-04 | Dashboard | `/dashboard` | Owner, Admin, Teknisi | F-09 |
 | S-05 | Daftar tiket | `/tickets` | Owner, Admin, Teknisi | F-04 |
 | S-06 | Terima unit (tiket baru) | `/tickets/new` | Owner, Admin | F-03 |
-| S-07 | Detail tiket | `/tickets/[id]` | Owner, Admin, Teknisi (milik sendiri / belum ditugaskan) | F-04, F-05, F-06, F-07, F-08 |
+| S-07 | Detail tiket | `/tickets/[id]` | Owner, Admin, Teknisi (milik sendiri; belum ditugaskan jika klaim aktif) | F-04, F-05, F-06, F-07, F-08 |
 | S-08 | Cetak tanda terima | `/print/receipt/[id]` | Owner, Admin | F-03, F-08 |
 | S-09 | Cetak nota | `/print/invoice/[id]` | Owner, Admin | F-07 |
 | S-10 | Daftar pelanggan | `/customers` | Owner, Admin | F-03 |
@@ -86,12 +86,12 @@ Aksi lain: "Nonaktifkan" (dialog konfirmasi, sesi staf dicabut), "Aktifkan", "Re
 1. Di S-06 cari pelanggan (nama/nomor WA) atau pilih "Pelanggan baru" (nama + nomor WA).
 2. Isi unit: jenis, merek, model, IMEI/SN, keluhan, kondisi fisik, kelengkapan, kunci layar.
 3. Opsional: target selesai, teknisi, DP (jumlah + metode).
-4. Pelanggan membaca syarat servis (bisa dibuka), mencentang setuju, dan tanda tangan di pad.
+4. Pelanggan membaca syarat servis (bisa dibuka), mencentang setuju, dan tanda tangan di pad (wajib jika pengaturan "Wajib tanda tangan pelanggan" aktif; jika nonaktif pad tetap ada tetapi boleh kosong).
 5. Simpan -> sistem membuat pelanggan (jika baru), tiket (nomor + token), pembayaran DP (jika ada), event `created`.
 6. Redirect ke S-07 dengan panel sukses: "Tiket SRV-00042 tersimpan" + "Cetak tanda terima" + "Kirim WA: Diterima".
 
 **Alur alternatif / gagal:**
-- Tanda tangan kosong -> "Tanda tangan pelanggan wajib".
+- Tanda tangan kosong saat pengaturan wajib aktif -> "Tanda tangan pelanggan wajib"; saat nonaktif -> tiket tersimpan dan tanda terima mencetak "Tanpa tanda tangan pelanggan".
 - Nomor WA tidak valid -> "Nomor WA tidak valid (contoh: 0812xxxxxxxx)".
 - Nomor WA pelanggan baru sudah ada -> "Nomor ini milik {nama}. Pakai pelanggan ini?" [Pakai] [Batal].
 - Langganan `expired` -> S-06 menampilkan state terkunci + tautan S-17 (owner) atau "Hubungi pemilik toko" (admin).
@@ -105,7 +105,7 @@ flowchart TD
   B -- Tidak --> D[Isi nama + nomor WA]
   C --> E[Isi unit, keluhan, kelengkapan, kunci layar]
   D --> E
-  E --> F[Pelanggan setujui syarat + tanda tangan]
+  E --> F[Pelanggan setujui syarat + tanda tangan jika wajib]
   F --> G{Valid?}
   G -- Tidak --> H[Error per field, isian tetap] --> E
   G -- Ya --> I[Simpan: nomor tiket + token + DP]
@@ -115,8 +115,8 @@ flowchart TD
 ### F-04 Pengerjaan & status servis
 **Pemicu:** staf membuka S-05 / S-07.
 **Alur utama:**
-1. S-05 menampilkan tab "Semua" (owner/admin) atau "Tiket saya" + "Belum ditugaskan" (teknisi), dengan filter status dan pencarian.
-2. Di S-07, owner/admin memilih teknisi; teknisi bisa menekan "Ambil tiket" pada tiket belum ditugaskan.
+1. S-05 menampilkan tab "Semua" + "Belum ditugaskan" (owner/admin), atau "Tiket saya" (teknisi; ditambah "Belum ditugaskan" jika owner mengaktifkan klaim), dengan filter status dan pencarian.
+2. Di S-07, owner/admin memilih teknisi. Jika pengaturan "Teknisi boleh mengambil tiket sendiri" aktif, teknisi bisa menekan "Ambil tiket" pada tiket yang belum ditugaskan.
 3. Teknisi mengubah status lewat tombol aksi yang hanya menampilkan transisi yang diizinkan (BSD bagian 4), mengisi diagnosa, dan menambah catatan.
 4. "Lihat kunci layar" (owner/teknisi ditugaskan) -> dialog "Akses ini dicatat" -> nilai tampil 30 detik lalu tersembunyi lagi.
 
@@ -221,7 +221,7 @@ flowchart TD
 
 **Alur alternatif / gagal:**
 - Token tidak ditemukan -> 404 generik "Halaman tidak ditemukan" (tanpa menyebut tiket).
-- Lebih dari 90 hari sejak `picked_up` -> "Link sudah tidak berlaku, hubungi {nama toko}" + tombol WA toko.
+- Lewat 60 hari setelah garansi berakhir (`link_expires_at`, BSD tabel `tickets`) -> "Link sudah tidak berlaku, hubungi {nama toko}" + tombol WA toko.
 - Nomor WA pelanggan tidak valid -> tombol WA nonaktif + "Perbaiki nomor WA pelanggan" (tautan S-11).
 
 ### F-09 Dashboard & laporan
@@ -231,14 +231,14 @@ flowchart TD
 
 ### F-10 Pengaturan toko
 **Pemicu:** owner membuka S-16.
-**Alur utama:** ubah field -> "Simpan" -> toast "Pengaturan tersimpan". Pratinjau syarat servis dan contoh nomor tiket (`{prefix}-00001`) tampil langsung.
+**Alur utama:** ubah field -> "Simpan" -> toast "Pengaturan tersimpan". Pratinjau syarat servis dan contoh nomor tiket (`{prefix}-00001`) tampil langsung. Switch "Wajib tanda tangan pelanggan" berlaku untuk tiket baru di S-06; switch "Teknisi boleh mengambil tiket sendiri" langsung mengubah S-05 dan S-07 teknisi.
 **Alur alternatif / gagal:** prefix tidak valid -> "Prefix 2-5 huruf kapital (A-Z)"; error per field.
 
 ### F-11 Langganan & super-admin
 **Pemicu:** banner langganan, owner membuka S-17, atau super-admin login.
 **Alur utama:**
-1. Owner melihat status dan instruksi transfer di S-17, lalu transfer di luar aplikasi dan mengirim bukti ke super-admin via WA.
-2. Super-admin membuka S-19 -> pilih toko -> S-20 -> "Perpanjang" (tanggal aktif sampai, jumlah dibayar, catatan) -> tercatat di `subscription_logs`.
+1. Owner melihat status, harga, nominal transfer dengan kode unik toko (mis. Rp 99.123), dan rekening tujuan di S-17, lalu transfer di luar aplikasi dan mengirim bukti ke super-admin via WA.
+2. Super-admin mencocokkan kode unik di S-19 -> pilih toko -> S-20 -> "Perpanjang" (tanggal aktif sampai, jumlah dibayar, catatan) -> tercatat di `subscription_logs`.
 3. S-20 juga menyediakan "Reset password owner" (password sementara, owner wajib menggantinya saat login).
 
 **Alur alternatif / gagal:** tanggal perpanjangan <= hari ini -> "Tanggal harus setelah hari ini"; super-admin dibuat hanya via `pnpm admin:create` (tidak ada form publik).

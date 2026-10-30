@@ -1,6 +1,6 @@
 # DBD - Fixmaster
 
-> Versi: 0.1 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, AFD.md
+> Versi: 0.2 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, AFD.md
 > Sumber visual: file di `brand/` (logo, ikon, maskot VOLT Probe). Semua warna di bawah diturunkan dari file tersebut.
 
 ## 1. Karakter Brand
@@ -87,11 +87,12 @@ Badge memakai latar = warna token dengan opasitas 12% di atas `surface`, teks = 
 | Input | text, password, tel (nomor WA), money (prefix "Rp", pemisah ribuan), textarea, select, date | default, focus, error, disabled | S-01-S-03, S-06, S-07, S-11, S-13, S-15-S-17, S-20 |
 | Combobox | cari pelanggan, cari part (menampilkan sisa stok) | loading, kosong, hasil, error | S-06, S-07 |
 | Checkbox group | kelengkapan unit, setuju syarat servis | checked, focus, disabled | S-06 |
+| Switch | pengaturan on/off (wajib tanda tangan, teknisi ambil tiket) | on, off, focus, disabled | S-16 |
 | Badge | status tiket (8), stok menipis, status langganan | - | S-04, S-05, S-07, S-11, S-12, S-18, S-19 |
 | Readout | nomor tiket, total/sisa bayar (font mono, readout-bg, chamfer) | - | S-07, S-18 |
 | Card | kartu angka (bisa diklik), kartu tiket mobile, section detail | default, hover, focus | S-04, S-05, S-07, S-13, S-17, S-20 |
 | Table | menjadi daftar kartu di < 640px | loading (skeleton), kosong | S-05, S-10-S-15, S-19, S-20 |
-| Tabs | "Semua" / "Tiket saya" / "Belum ditugaskan" | aktif, focus | S-05 |
+| Tabs | owner/admin: "Semua" / "Belum ditugaskan"; teknisi: "Tiket saya" / "Belum ditugaskan" (jika klaim aktif) | aktif, focus | S-05 |
 | Pagination | 25 baris per halaman, tombol Sebelumnya/Berikutnya + info "1-25 dari N" | disabled di ujung | S-05, S-10, S-12, S-19 |
 | Dropdown menu | menu "Kirim WA" (item nonaktif sesuai status), menu user | open, item disabled, focus | S-07, header |
 | Date range picker | preset (Hari ini, 7 hari, Bulan ini, Bulan lalu) + 2 input date | error rentang | S-14 |

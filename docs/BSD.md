@@ -1,6 +1,6 @@
 # BSD - Fixmaster
 
-> Versi: 0.1 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, TRD.md, AFD.md
+> Versi: 0.2 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, TRD.md, AFD.md
 > Database: PostgreSQL (lokal PGlite, production Supabase) | ORM/migrasi: Drizzle ORM + drizzle-kit (`drizzle/`)
 
 ## 1. ERD
@@ -48,6 +48,9 @@ Fitur: F-01, F-10, F-11 | Tujuan: satu baris per toko (tenant).
 | default_warranty_days | integer | NOT NULL, default 30, CHECK 0-365 | [ASUMSI A-07] |
 | service_terms | text | NOT NULL, default teks syarat standar | Maks 2000 karakter (validasi app) |
 | print_format | print_format | NOT NULL, default `'thermal_58'` | [ASUMSI A-15] |
+| require_signature | boolean | NOT NULL, default true | Tanda tangan pelanggan wajib di S-06 [ASUMSI A-05] |
+| technicians_can_claim | boolean | NOT NULL, default false | Teknisi boleh mengambil tiket belum ditugaskan [ASUMSI A-13] |
+| billing_code | smallint | NOT NULL, CHECK 1-999 | Acak saat registrasi; ditambahkan ke nominal transfer langganan [ASUMSI A-03] |
 | trial_ends_at | timestamptz | NOT NULL | `created_at` + 14 hari [ASUMSI A-02] |
 | active_until | timestamptz | NULL | Diisi super-admin |
 
@@ -111,7 +114,7 @@ Fitur: F-03, F-04, F-05, F-07, F-08, F-09 | Tujuan: satu unit servis dari diteri
 | accessories_note | varchar(200) | NULL | |
 | lock_type | lock_type | NOT NULL, default `'none'` | |
 | lock_secret_enc | text | NULL, CHECK `lock_type <> 'none' OR lock_secret_enc IS NULL` | AES-256-GCM; di-NULL-kan saat `picked_up` |
-| signature_svg | text | NOT NULL | Maks 50 KB (validasi app) |
+| signature_svg | text | NULL | Maks 50 KB; wajib jika `tenants.require_signature` (validasi app) |
 | terms_accepted_at | timestamptz | NOT NULL | |
 | due_date | date | NULL | Target selesai |
 | diagnosis | varchar(2000) | NULL | |
@@ -127,7 +130,7 @@ Fitur: F-03, F-04, F-05, F-07, F-08, F-09 | Tujuan: satu unit servis dari diteri
 | created_by | uuid | FK users, NOT NULL | |
 
 Indeks: UNIQUE `(tenant_id, number)`; UNIQUE `(tenant_id, invoice_number)`; `(tenant_id, status, created_at DESC)`; `(tenant_id, assigned_to)`; `(tenant_id, customer_id)`; `(tenant_id, picked_up_at)` untuk laporan.
-Turunan (dihitung, tidak disimpan): `subtotal = Σ qty × unit_price`; `total = subtotal − discount_amount`; `paid = Σ payment − Σ refund`; `balance = total − paid`; `warranty_until = picked_up_at + warranty_days`.
+Turunan (dihitung, tidak disimpan): `subtotal = Σ qty × unit_price`; `total = subtotal − discount_amount`; `paid = Σ payment − Σ refund`; `balance = total − paid`; `warranty_until = picked_up_at + warranty_days` (tidak ada garansi untuk tiket yang dibatalkan); `link_expires_at = (warranty_until atau picked_up_at) + 60 hari` [ASUMSI A-06].
 
 ### ticket_items
 Fitur: F-05, F-06, F-07 | Tujuan: baris biaya (jasa/part) yang menjadi estimasi dan nota.
@@ -269,7 +272,7 @@ Semua kolom Teknisi/Admin/Owner dibatasi `tenant_id` milik sesi. Akses ke data t
 | tenants | nama, WA, alamat toko pemilik tiket | baca profil | baca profil | baca/ubah pengaturan | baca semua; ubah `active_until` |
 | users | - | baca nama staf | baca nama & peran staf | kelola staf tokonya | baca owner; reset password owner |
 | customers | nama pelanggan tiket itu | baca nama & WA pada tiket yang bisa ia akses | CRUD | CRUD | - |
-| tickets | subset PRD F-08 | baca: milik sendiri + belum ditugaskan; ubah: milik sendiri | CRUD (tidak bisa membuka kunci layar) | CRUD + buka kunci layar | jumlah tiket per toko |
+| tickets | subset PRD F-08 | baca: milik sendiri (+ belum ditugaskan jika `technicians_can_claim`); ubah: milik sendiri | CRUD (tidak bisa membuka kunci layar) | CRUD + buka kunci layar | jumlah tiket per toko |
 | tickets.lock_secret_enc | - | buka jika ditugaskan | tulis saat terima unit | buka | - |
 | ticket_items | baca | CRUD pada tiket miliknya (sebelum nota) | CRUD (sebelum nota) | CRUD + buka kunci nota | - |
 | ticket_events | baca `is_public` | baca & tambah catatan (tiket miliknya) | baca & tambah catatan | baca & tambah catatan | - |
@@ -289,9 +292,9 @@ Route Handler: `GET|POST /api/auth/[...all]` (Better Auth: sign-in, sign-out, se
 | resetStaffPassword | Owner | `{ userId, tempPassword }` | `{}` | NOT_FOUND, VALIDATION |
 | searchCustomers | Owner, Admin | `{ q }` (min 3 karakter) | `{ items }` (maks 10) | VALIDATION |
 | saveCustomer | Owner, Admin | `{ id?, name, phoneWa, notes? }` | `{ customerId }` | VALIDATION, PHONE_TAKEN |
-| createTicket | Owner, Admin | `{ customerId \| newCustomer, deviceType, brand, model, serialOrImei?, complaint, conditionNotes?, accessories, accessoriesNote?, lockType, lockSecret?, dueDate?, assignedTo?, downPayment?, signatureSvg, termsAccepted }` | `{ ticketId, number }` | VALIDATION, PHONE_TAKEN, SUBSCRIPTION_EXPIRED |
+| createTicket | Owner, Admin | `{ customerId \| newCustomer, deviceType, brand, model, serialOrImei?, complaint, conditionNotes?, accessories, accessoriesNote?, lockType, lockSecret?, dueDate?, assignedTo?, downPayment?, signatureSvg?, termsAccepted }` | `{ ticketId, number }` | VALIDATION, PHONE_TAKEN, SUBSCRIPTION_EXPIRED |
 | assignTicket | Owner, Admin | `{ ticketId, userId \| null, updatedAt }` | `{}` | NOT_FOUND, CONFLICT |
-| claimTicket | Teknisi | `{ ticketId, updatedAt }` | `{}` | NOT_FOUND, ALREADY_ASSIGNED, CONFLICT |
+| claimTicket | Teknisi (jika `technicians_can_claim`) | `{ ticketId, updatedAt }` | `{}` | NOT_FOUND, CLAIM_DISABLED, ALREADY_ASSIGNED, CONFLICT |
 | changeStatus | Sesuai bagian 4 | `{ ticketId, to, note?, cancelReason?, updatedAt }` | `{ status }` | INVALID_TRANSITION, FORBIDDEN, CONFLICT, NO_ITEMS, ESTIMATE_EXCEEDED, INVOICE_REQUIRED, BALANCE_DUE |
 | recordManualApproval | Owner, Admin | `{ ticketId, decision: 'approve' \| 'reject', note, updatedAt }` | `{ status }` | INVALID_TRANSITION, CONFLICT |
 | respondEstimate | Publik | `{ token, decision, reason? }` | `{ status }` | NOT_FOUND, NOT_AWAITING |
@@ -307,7 +310,7 @@ Route Handler: `GET|POST /api/auth/[...all]` (Better Auth: sign-in, sign-out, se
 | savePart | Owner, Admin | `{ id?, sku?, name, costPrice, sellPrice, minStock, isActive }` | `{ partId }` | VALIDATION, SKU_TAKEN, SUBSCRIPTION_EXPIRED (part baru) |
 | stockIn | Owner, Admin | `{ partId, qty, unitCost, note? }` | `{ stock }` | VALIDATION |
 | adjustStock | Owner, Admin | `{ partId, qtyChange, note }` | `{ stock }` | VALIDATION, INSUFFICIENT_STOCK |
-| updateSettings | Owner | `{ name, address?, phoneWa, timezone, ticketPrefix, defaultWarrantyDays, serviceTerms, printFormat }` | `{}` | VALIDATION |
+| updateSettings | Owner | `{ name, address?, phoneWa, timezone, ticketPrefix, defaultWarrantyDays, serviceTerms, printFormat, requireSignature, techniciansCanClaim }` | `{}` | VALIDATION |
 | extendSubscription | Super-admin | `{ tenantId, activeUntil, amountPaid?, note? }` | `{ activeUntil }` | VALIDATION, DATE_NOT_FUTURE |
 | resetOwnerPassword | Super-admin | `{ tenantId, tempPassword }` | `{}` | NOT_FOUND, VALIDATION |
 
@@ -321,10 +324,10 @@ Format error standar: `{ "ok": false, "error": { "code": "INSUFFICIENT_STOCK", "
 - Data seed (dev, `pnpm db:seed`, deterministik):
   - Toko "Toko Demo Servis" (prefix `SRV`, trial aktif) dengan `owner@demo.test`, `admin@demo.test`, `teknisi@demo.test`, `teknisi2@demo.test` (password `password123`, hanya dev).
   - 8 pelanggan, 10 part (2 di bawah stok minimum), 12 tiket mencakup kedelapan status lengkap dengan item, pembayaran, dan event.
-  - Toko kedua "Toko Lain" dengan 1 owner dan 2 tiket (untuk uji isolasi).
+  - Toko kedua "Toko Lain" dengan 1 owner, 1 teknisi, dan 2 tiket (untuk uji isolasi), memakai `require_signature = false` dan `technicians_can_claim = true` agar kedua mode pengaturan teruji.
   - Super-admin `admin@fixmaster.test`.
 
 ## 8. Kebijakan Data
 - Retensi: data tiket, pelanggan, dan pembayaran disimpan selama toko terdaftar. Penghapusan toko dilakukan manual oleh super-admin atas permintaan owner (tidak ada fitur UI di MVP).
 - Data sensitif/PII: `customers.name`, `customers.phone_wa`, `tickets.serial_or_imei` (S-18 hanya 4 karakter akhir), `tickets.signature_svg`, `tickets.lock_secret_enc` (terenkripsi, dihapus saat `picked_up`), `users.email`. Tidak boleh muncul di log.
-- Backup: production mengandalkan backup harian Supabase; data lokal PGlite adalah data uji [ASUMSI A-11].
+- Backup: production memakai backup Supabase sesuai tier (tier Free: lihat risiko TRD bagian 9); data lokal PGlite adalah data uji [ASUMSI A-11].

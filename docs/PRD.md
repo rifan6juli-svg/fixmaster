@@ -1,6 +1,6 @@
 # PRD - Fixmaster
 
-> Versi: 0.1 | Diperbarui: 2026-10-30 | Status: Draft
+> Versi: 0.2 | Diperbarui: 2026-10-30 | Status: Draft (asumsi dikonfirmasi, lihat bagian 8)
 
 ## 1. Ringkasan
 Fixmaster adalah SaaS B2B (web responsive + PWA) untuk toko reparasi laptop, handphone, tablet, dan perangkat elektronik lain di Indonesia. Fixmaster mencatat seluruh perjalanan unit servis: penerimaan unit dengan tanda tangan pelanggan, pengerjaan oleh teknisi, estimasi yang disetujui pelanggan lewat link, pemakaian sparepart dari stok, sampai nota, pembayaran, dan pengambilan. Pelanggan memantau status lewat link yang dikirim via WhatsApp. Nilai utamanya: toko tidak lagi kehilangan jejak unit, uang, dan stok, dan pelanggan tidak perlu menelepon untuk menanyakan progres.
@@ -61,15 +61,15 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat.
 
 **F-03 Penerimaan unit**
 - [ ] Pelanggan: cari berdasarkan nama atau nomor WA (min 3 karakter, hasil maks 10) atau buat baru (nama + nomor WA wajib). Nomor WA disimpan ternormalisasi `62xxxxxxxxx` dan unik per toko.
-- [ ] Form tiket (S-06): jenis perangkat, merek, model, IMEI/nomor seri (opsional), keluhan (wajib, maks 1000 karakter), kondisi fisik (opsional), kelengkapan (checklist + catatan), kunci layar (tipe + nilai), target selesai (opsional), teknisi (opsional), DP (opsional), centang syarat servis + tanda tangan pelanggan (wajib) [ASUMSI A-05].
+- [ ] Form tiket (S-06): jenis perangkat, merek, model, IMEI/nomor seri (opsional), keluhan (wajib, maks 1000 karakter), kondisi fisik (opsional), kelengkapan (checklist + catatan), kunci layar (tipe + nilai), target selesai (opsional), teknisi (opsional), DP (opsional), centang syarat servis (wajib), dan tanda tangan pelanggan (wajib jika pengaturan "Wajib tanda tangan pelanggan" aktif; default aktif) [ASUMSI A-05].
 - [ ] Simpan menghasilkan nomor tiket `{prefix}-{5 digit}` berurutan per toko (mis. `SRV-00042`), status `received`, dan token status publik acak. Nilai kunci layar tidak pernah tersimpan sebagai plaintext di database.
-- [ ] Setelah simpan tampil tombol "Cetak tanda terima" (S-08) dan "Kirim WA: Diterima".
+- [ ] Setelah simpan tampil tombol "Cetak tanda terima" (S-08) dan "Kirim WA: Diterima". Tiket tanpa tanda tangan mencetak keterangan "Tanpa tanda tangan pelanggan".
 - [ ] Daftar & detail pelanggan (S-10, S-11) menampilkan riwayat tiket per pelanggan.
 - [ ] Kasus gagal: error validasi tampil di bawah field terkait; isian form (kecuali tanda tangan) tidak hilang saat simpan gagal.
 
 **F-04 Pengerjaan & status servis**
 - [ ] Status hanya berpindah sesuai tabel transisi di BSD bagian 4; transisi lain ditolak dengan pesan "Perubahan status tidak diizinkan".
-- [ ] Owner/admin menugaskan teknisi. Teknisi melihat tiket miliknya dan tiket yang belum ditugaskan, dan bisa menekan "Ambil tiket" [ASUMSI A-13].
+- [ ] Owner/admin menugaskan teknisi. Teknisi melihat tiket miliknya. Jika owner mengaktifkan "Teknisi boleh mengambil tiket sendiri" (default nonaktif), teknisi juga melihat tiket yang belum ditugaskan dan bisa menekan "Ambil tiket" [ASUMSI A-13].
 - [ ] Setiap perubahan status, penugasan, diagnosa, dan catatan tercatat di timeline beserta waktu dan pelakunya.
 - [ ] Nilai kunci layar hanya bisa dibuka oleh owner dan teknisi yang ditugaskan; setiap pembukaan tercatat (`secret_viewed`); nilainya dihapus otomatis saat status menjadi `picked_up`.
 - [ ] Daftar tiket (S-05): filter status & teknisi, pencarian nomor tiket/nama/nomor WA, 25 tiket per halaman, urut terbaru.
@@ -100,7 +100,7 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat.
 **F-08 Status pelanggan & WhatsApp**
 - [ ] S-18 (`/s/{token}`) terbuka tanpa login dan menampilkan: nama & tombol WA toko, nomor tiket, unit, status saat ini + timeline publik, estimasi (dengan tombol Setujui/Tolak saat `awaiting_approval`), ringkasan pembayaran, dan garansi setelah diambil.
 - [ ] S-18 tidak menampilkan kunci layar, catatan internal, nama teknisi, atau IMEI/nomor seri penuh (hanya 4 karakter terakhir).
-- [ ] Token minimal 128 bit acak; token salah -> halaman 404 generik. Link kedaluwarsa 90 hari setelah `picked_up` [ASUMSI A-06] dengan pesan "Link sudah tidak berlaku, hubungi toko".
+- [ ] Token minimal 128 bit acak; token salah -> halaman 404 generik. Link kedaluwarsa 60 hari setelah masa garansi berakhir [ASUMSI A-06] dengan pesan "Link sudah tidak berlaku, hubungi toko".
 - [ ] Di S-07 tersedia 4 tombol WA berbasis template (Diterima, Estimasi, Siap diambil, Terima kasih + garansi) yang membuka `wa.me/{62xxx}?text=...` di tab baru dan mencatat event `wa_opened`.
 - [ ] Tanda terima (S-08) memuat link status dalam bentuk teks dan QR code.
 
@@ -110,14 +110,14 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat.
 - [ ] Angka laporan untuk data seed tetap sama persis dengan nilai yang diharapkan di tes integrasi.
 
 **F-10 Pengaturan toko**
-- [ ] Owner mengubah (S-16): nama toko, alamat, nomor WA, zona waktu (WIB/WITA/WIT) [ASUMSI A-16], prefix tiket (2-5 huruf kapital), garansi default (0-365 hari), syarat servis (maks 2000 karakter), format cetak (`thermal_58`, `thermal_80`, `a4`) [ASUMSI A-15].
+- [ ] Owner mengubah (S-16): nama toko, alamat, nomor WA, zona waktu (WIB/WITA/WIT) [ASUMSI A-16], prefix tiket (2-5 huruf kapital), garansi default (0-365 hari), syarat servis (maks 2000 karakter), format cetak (`thermal_58`, `thermal_80`, `a4`) [ASUMSI A-15], switch "Wajib tanda tangan pelanggan" (default aktif) [ASUMSI A-05], dan switch "Teknisi boleh mengambil tiket sendiri" (default nonaktif) [ASUMSI A-13].
 - [ ] Perubahan prefix hanya berlaku untuk tiket baru; nomor lama tidak berubah.
 
 **F-11 Langganan & super-admin**
 - [ ] Status langganan dihitung dari tanggal: `active` jika `active_until` > sekarang, `trial` jika `trial_ends_at` > sekarang, selain itu `expired`.
 - [ ] Banner sisa hari tampil di semua halaman aplikasi bila sisa <= 7 hari. Saat `expired`: tidak bisa membuat tiket baru, menambah staf, atau menambah part; tiket berjalan tetap bisa diproses, dibayar, dan diambil [ASUMSI A-02].
-- [ ] S-17 menampilkan status, tanggal berakhir, dan instruksi pembayaran transfer [ASUMSI A-03].
-- [ ] Super-admin (dibuat lewat perintah CLI, bukan form publik) bisa: melihat daftar toko + status + jumlah tiket 30 hari terakhir (S-19), memperpanjang `active_until` dengan catatan pembayaran, dan mereset password owner (S-20). Semua aksi tercatat di `subscription_logs`.
+- [ ] S-17 menampilkan status, tanggal berakhir, harga (Rp 99.000/bulan atau Rp 990.000/tahun), nominal transfer yang sudah ditambah kode unik toko (mis. Rp 99.123), dan rekening tujuan [ASUMSI A-03].
+- [ ] Super-admin (dibuat lewat perintah CLI, bukan form publik) bisa: melihat daftar toko + status + kode unik pembayaran + jumlah tiket 30 hari terakhir (S-19), memperpanjang `active_until` dengan catatan pembayaran, dan mereset password owner (S-20). Semua aksi tercatat di `subscription_logs`.
 
 ## 6. Di Luar Scope (jangan dikerjakan)
 - Multi-cabang per toko (skema memakai `tenant_id` sehingga `branch_id` bisa ditambah nanti).
@@ -139,24 +139,26 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat.
 - Bahasa & format: UI Bahasa Indonesia; Rupiah tanpa desimal (`Rp 150.000`); tanggal `30 Okt 2026, 14.05`.
 
 ## 8. Asumsi, Risiko, Dependensi
-Daftar asumsi (satu-satunya daftar; dokumen lain merujuk ID ini):
-- [ASUMSI A-01] Target toko 1-10 staf, <= 300 tiket/bulan per toko.
-- [ASUMSI A-02] Trial 14 hari. Saat `expired`, hanya pembuatan tiket/staf/part baru yang diblokir; tiket berjalan tetap bisa diselesaikan.
-- [ASUMSI A-03] Satu paket langganan; harga dan rekening tujuan belum ditentukan, ditampilkan dari konfigurasi.
-- [ASUMSI A-04] Satu user = satu toko; email unik secara global.
-- [ASUMSI A-05] Pelanggan selalu hadir saat penerimaan unit, sehingga tanda tangan wajib.
-- [ASUMSI A-06] Link status berlaku sampai 90 hari setelah unit diambil.
-- [ASUMSI A-07] Garansi default 30 hari, bisa diubah per toko dan per tiket.
-- [ASUMSI A-08] Tanpa PPN; semua harga dalam Rupiah bulat.
-- [ASUMSI A-09] Target metrik sukses di bagian 3 adalah usulan awal untuk fase pilot.
-- [ASUMSI A-10] Font IBM Plex Sans + IBM Plex Mono; referensi visual di DBD bagian 1.
-- [ASUMSI A-11] Data di database lokal (PGlite) hanya data uji; tidak dimigrasikan ke Supabase.
-- [ASUMSI A-12] Production di Vercel Pro (Hobby melarang pemakaian komersial) region `sin1` + Supabase region Singapore.
-- [ASUMSI A-13] Teknisi boleh melihat dan mengambil tiket yang belum ditugaskan.
-- [ASUMSI A-14] Stok berkurang saat part ditambahkan ke tiket (bukan saat disetujui) dan kembali saat item dihapus atau tiket dibatalkan.
-- [ASUMSI A-15] Format cetak: thermal 58 mm, thermal 80 mm, dan A4, via cetak browser.
-- [ASUMSI A-16] Zona waktu default `Asia/Jakarta`, bisa diganti per toko.
-- [ASUMSI A-17] Tanpa reset password via email: owner mereset password staf, super-admin mereset password owner.
+Daftar asumsi & keputusan (satu-satunya daftar; tag `[ASUMSI A-xx]` di dokumen lain merujuk ID di tabel ini):
+| ID | Isi | Status |
+|---|---|---|
+| A-01 | Target toko 1-10 staf, <= 300 tiket/bulan per toko. | Dikonfirmasi user 2026-10-30 |
+| A-02 | Trial 14 hari. Saat `expired`, hanya pembuatan tiket/staf/part baru yang diblokir; tiket berjalan tetap bisa diselesaikan. | Dikonfirmasi |
+| A-03 | Satu paket: Rp 99.000/bulan atau Rp 990.000/tahun. Bayar via transfer manual; nominal ditambah kode unik 3 digit milik toko (mis. Rp 99.123) agar mudah dicocokkan; diaktifkan super-admin. | Harga dikonfirmasi; **rekening tujuan belum ditentukan** |
+| A-04 | Satu user = satu toko; email unik secara global. | Dikonfirmasi |
+| A-05 | Tanda tangan pelanggan wajib secara default; owner bisa menonaktifkan kewajiban ini di Pengaturan (S-16), mis. untuk unit titipan. Saat nonaktif, pad tetap tersedia tetapi boleh kosong. | Dikonfirmasi |
+| A-06 | Link status berlaku sampai 60 hari setelah masa garansi berakhir (`picked_up_at` + `warranty_days` + 60 hari). Tiket yang dibatalkan tidak bergaransi, jadi linknya berlaku 60 hari setelah diambil. | Dikonfirmasi (aturan tiket dibatalkan: usulan) |
+| A-07 | Garansi default 30 hari, bisa diubah per toko dan per tiket. | Dikonfirmasi |
+| A-08 | Tanpa PPN; semua harga dalam Rupiah bulat. | Dikonfirmasi |
+| A-09 | Target metrik sukses di bagian 3 untuk fase pilot. | Dikonfirmasi |
+| A-10 | Font IBM Plex Sans + IBM Plex Mono; referensi visual di DBD bagian 1. | Dikonfirmasi |
+| A-11 | Data di database lokal (PGlite) hanya data uji; tidak dimigrasikan ke Supabase. | Dikonfirmasi |
+| A-12 | Production di Vercel Hobby (region `sin1`) dulu, pindah ke Vercel Pro setelah bisnis menghasilkan; Supabase region Singapore. Batasan Hobby: TRD bagian 9. | Dikonfirmasi |
+| A-13 | Owner/admin menugaskan teknisi. Owner bisa mengaktifkan "Teknisi boleh mengambil tiket sendiri" di Pengaturan (default nonaktif). | Dikonfirmasi |
+| A-14 | Stok berkurang saat part ditambahkan ke tiket (bukan saat disetujui) dan kembali saat item dihapus atau tiket dibatalkan. | Dikonfirmasi |
+| A-15 | Format cetak: thermal 58 mm, thermal 80 mm, dan A4, via cetak browser. | Dikonfirmasi |
+| A-16 | Zona waktu default `Asia/Jakarta`, bisa diganti per toko. | Dikonfirmasi |
+| A-17 | Tanpa reset password via email: owner mereset password staf, super-admin mereset password owner. | Dikonfirmasi |
 
 Risiko -> mitigasi:
 - Pelanggan tidak membuka link status -> link juga tercetak sebagai QR di tanda terima; tombol WA berisi ringkasan status.
@@ -167,7 +169,5 @@ Risiko -> mitigasi:
 Dependensi: WhatsApp (link `wa.me`, tanpa API), Supabase (Postgres production), Vercel (hosting).
 
 ## 9. Pertanyaan Terbuka
-- Harga paket langganan dan rekening tujuan transfer (A-03)?
-- Apakah 14 hari trial dan batasan saat kedaluwarsa (A-02) sudah sesuai?
-- Apakah ada kasus unit dititipkan tanpa pelanggan hadir (memengaruhi A-05)?
+- Rekening tujuan transfer langganan (bank, nomor, atas nama) untuk S-17 (A-03)?
 - Domain production (mis. `fixmaster.id`) dan alamat email support?

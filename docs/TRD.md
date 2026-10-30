@@ -1,6 +1,6 @@
 # TRD - Fixmaster
 
-> Versi: 0.1 | Diperbarui: 2026-10-30 | Merujuk: PRD.md
+> Versi: 0.2 | Diperbarui: 2026-10-30 | Merujuk: PRD.md
 
 ## 1. Tech Stack
 | Lapisan | Pilihan | Alasan (1 kalimat) |
@@ -13,7 +13,7 @@
 | Auth | Better Auth 1.7 (email + password), adapter Drizzle | Data auth tersimpan di Postgres kita sendiri, jadi tidak perlu ditulis ulang saat pindah ke Supabase. |
 | Validasi | Zod 4 | Satu skema untuk validasi form dan Server Action. |
 | Lainnya | `signature_pad` (tanda tangan), `qrcode` (QR status), `node:crypto` (AES-256-GCM) | Kecil, tanpa layanan eksternal. |
-| Hosting/Deploy | Lokal dulu; production Vercel Pro `sin1` + Supabase region Singapore [ASUMSI A-12] | Latensi rendah untuk Indonesia; Vercel Hobby melarang pemakaian komersial. |
+| Hosting/Deploy | Lokal dulu; production Vercel Hobby `sin1` (pindah ke Pro setelah bisnis menghasilkan) + Supabase region Singapore [ASUMSI A-12] | Gratis di awal dan latensi rendah untuk Indonesia; batasan Hobby di bagian 9. |
 | Layanan pihak ketiga | WhatsApp via link `wa.me` (tanpa API) | Pilihan user; gratis dan tanpa risiko blokir nomor. |
 
 Versi runtime & package manager: Node.js 22 LTS atau lebih baru, pnpm. Test: Vitest 5, Playwright 1.64.
@@ -59,6 +59,7 @@ src/
     print/                # receipt/[id], invoice/[id]
     api/auth/[...all]/    # handler Better Auth
     manifest.ts           # PWA manifest
+  config/                 # billing.ts (harga paket, rekening tujuan)
   components/
     ui/                   # primitif shadcn yang sudah diberi token DBD
     brand/                # mascot.tsx, logo.tsx
@@ -99,7 +100,7 @@ tests/
 |---|---|---|
 | local | pengembangan | PGlite di `.data/pglite` (di-`.gitignore`); `pnpm db:reset` untuk mulai bersih. |
 | test | Vitest & Playwright | Vitest: PGlite in-memory per file tes + migrasi. Playwright: `pnpm build && pnpm start` dengan direktori PGlite sementara. |
-| production | pengguna nyata | Vercel Pro (`sin1`) + Supabase Postgres Singapore; dibuat di IPD Fase 4 [ASUMSI A-11, A-12]. |
+| production | pengguna nyata | Vercel Hobby (`sin1`), lalu Pro setelah bisnis menghasilkan, + Supabase Postgres Singapore; dibuat di IPD Fase 4 [ASUMSI A-11, A-12]. |
 
 Variabel lingkungan (`.env.example`):
 | Nama | Contoh lokal | Keterangan |
@@ -131,4 +132,6 @@ CI/CD: GitHub Actions menjalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`, `p
 - Bundling WASM PGlite di Next.js -> `serverExternalPackages`; semua rute data memakai runtime Node (bukan Edge).
 - Koneksi berlebih dari serverless ke Supabase -> transaction pooler (port 6543) dengan `prepare: false`.
 - Pembaruan Better Auth mengubah skema -> versi dikunci di `package.json`; jalankan generator skema Better Auth lalu bandingkan sebelum upgrade.
+- Vercel Hobby hanya untuk penggunaan non-komersial dan kuotanya lebih kecil [ASUMSI A-12] -> pindah ke Vercel Pro paling lambat saat toko pertama membayar langganan; pantau pemakaian di dashboard Vercel.
+- Supabase tier Free menjeda project setelah 7 hari tanpa aktivitas dan tidak menyertakan backup harian yang bisa dipulihkan -> naik ke tier Pro bersamaan dengan Vercel Pro, atau sementara jalankan `pg_dump` terjadwal.
 - Kehilangan `DEVICE_SECRET_KEY` -> simpan di password manager owner proyek; nilai kunci layar memang bersifat sementara (dihapus saat diambil).
