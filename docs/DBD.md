@@ -1,6 +1,6 @@
 # DBD - Fixmaster
 
-> Versi: 0.2 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, AFD.md
+> Versi: 0.3 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, AFD.md
 > Sumber visual: file di `brand/` (logo, ikon, maskot VOLT Probe). Semua warna di bawah diturunkan dari file tersebut.
 
 ## 1. Karakter Brand
@@ -83,8 +83,8 @@ Badge memakai latar = warna token dengan opasitas 12% di atas `surface`, teks = 
 ## 3. Komponen
 | Komponen | Varian | State wajib | Dipakai di |
 |---|---|---|---|
-| Button | primary, secondary, ghost, danger; ukuran md (40px) & lg (48px) | default, hover, focus, disabled, loading | semua layar |
-| Input | text, password, tel (nomor WA), money (prefix "Rp", pemisah ribuan), textarea, select, date | default, focus, error, disabled | S-01-S-03, S-06, S-07, S-11, S-13, S-15-S-17, S-20 |
+| Button | primary, secondary, ghost, danger; ukuran md (44px, memenuhi target sentuh) & lg (48px) | default, hover, focus, disabled, loading | semua layar |
+| Input | text, password, tel (nomor WA), money (prefix "Rp", pemisah ribuan), textarea, select, date; tinggi 44px | default, focus, error, disabled | S-01-S-03, S-06, S-07, S-11, S-13, S-15-S-17, S-20 |
 | Combobox | cari pelanggan, cari part (menampilkan sisa stok) | loading, kosong, hasil, error | S-06, S-07 |
 | Checkbox group | kelengkapan unit, setuju syarat servis | checked, focus, disabled | S-06 |
 | Switch | pengaturan on/off (wajib tanda tangan, teknisi ambil tiket) | on, off, focus, disabled | S-16 |

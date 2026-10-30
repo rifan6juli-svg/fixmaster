@@ -1,6 +1,6 @@
 # TRD - Fixmaster
 
-> Versi: 0.3 | Diperbarui: 2026-10-30 | Merujuk: PRD.md
+> Versi: 0.4 | Diperbarui: 2026-10-30 | Merujuk: PRD.md
 
 ## 1. Tech Stack
 | Lapisan | Pilihan | Alasan (1 kalimat) |
@@ -85,6 +85,7 @@ tests/
 - Penanganan error: Server Action mengembalikan `ActionResult<T>` = `{ ok: true, data }` atau `{ ok: false, error: { code, message, fields? } }`; kode error mengikuti BSD bagian 6. Error tak terduga dicatat lewat `logger.error` dan ditampilkan sebagai "Terjadi kesalahan, coba lagi."
 - Konkurensi: update tiket menyertakan `updated_at` yang dibaca klien; jika tidak cocok kembalikan `CONFLICT`.
 - Uang: integer Rupiah; format dengan `formatRupiah()` di `src/lib/money.ts`. Tanggal: simpan `timestamptz` (UTC), tampilkan dengan zona waktu toko via `Intl.DateTimeFormat('id-ID')`.
+- Komponen UI: primitif ada di `src/components/ui/`, berbasis shadcn `new-york-v4` (Radix). Menambah komponen baru: `pnpm dlx shadcn add <nama>`, atau salin dari `apps/v4/registry/new-york-v4/ui/` di repo GitHub `shadcn-ui/ui` jika `ui.shadcn.com` tidak bisa diakses. Setelah itu kelas diganti ke token DBD: `bg-background`/`bg-card` -> `bg-background`/`bg-surface`; `bg-popover` -> `bg-surface-raised`; `bg-accent`/`bg-muted`/`bg-secondary` -> `bg-surface-sunken` (**`accent` di DBD = teal info, bukan warna hover**); `text-foreground` -> `text-text`; `text-muted-foreground` -> `text-text-muted`; `text-primary-foreground` -> `text-on-primary`; `border-input` -> `border-border-strong`; `destructive` -> `danger`. Hapus `outline-none`/`ring-*` fokus (fokus global di `globals.css`), dan jangan biarkan CLI mengubah token di `globals.css`.
 - Lint/format: ESLint (`eslint-config-next`) + Prettier -> `pnpm lint`, `pnpm format`; cek tipe `pnpm typecheck`.
 - Dilarang: `any`; SQL mentah dengan konkatenasi string (pakai query builder atau template `sql`); secret di kode; `console.log` di kode yang di-commit (pakai `logger`); mengimpor modul server dari Client Component; mencatat atau mengembalikan nilai kunci layar selain lewat aksi `revealLockSecret`.
 
