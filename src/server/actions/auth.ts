@@ -1,31 +1,42 @@
 "use server";
 
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { fieldErrors, registerShopSchema } from "@/lib/validation/auth";
+import {
+  changePasswordSchema,
+  registerShopSchema,
+} from "@/lib/validation/auth";
 import { getAuth } from "@/server/auth/auth";
-import { AppError } from "@/server/errors";
-import { registerShop as createShop } from "@/server/services/shops";
-import { toActionResult } from "./result";
+import { getSessionUser } from "@/server/auth/context";
+import * as accounts from "@/server/services/accounts";
+import * as shops from "@/server/services/shops";
+import { parseInput, toActionResult } from "./result";
 
 export async function registerShop(input: unknown) {
   return toActionResult(async () => {
-    const parsed = registerShopSchema.safeParse(input);
-    if (!parsed.success) {
-      throw new AppError(
-        "VALIDATION",
-        "Periksa kembali isian Anda",
-        fieldErrors(parsed.error),
-      );
-    }
+    const shop = parseInput(registerShopSchema, input);
 
-    await createShop(parsed.data);
+    await shops.registerShop(shop);
 
-    const { email, password } = parsed.data;
     await getAuth().api.signInEmail({
-      body: { email, password },
+      body: { email: shop.email, password: shop.password },
       headers: await headers(),
     });
+
+    redirect("/dashboard");
+  });
+}
+
+export async function changePassword(input: unknown) {
+  return toActionResult(async () => {
+    const user = await getSessionUser();
+
+    await accounts.changePassword(
+      user.id,
+      parseInput(changePasswordSchema, input),
+    );
+
     return null;
   });
 }

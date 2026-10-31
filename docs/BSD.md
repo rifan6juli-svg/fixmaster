@@ -1,6 +1,6 @@
 # BSD - Fixmaster
 
-> Versi: 0.4 | Diperbarui: 2026-10-31 | Merujuk: PRD.md, TRD.md, AFD.md
+> Versi: 0.5 | Diperbarui: 2026-10-31 | Merujuk: PRD.md, TRD.md, AFD.md
 > Database: Supabase Postgres (lokal via CLI, production hosted) | ORM/migrasi: Drizzle ORM + drizzle-kit (`drizzle/`)
 
 ## 1. ERD
@@ -314,6 +314,8 @@ Route Handler: `GET|POST /api/auth/[...all]` (Better Auth: sign-in, sign-out, se
 | updateSettings | Owner | `{ name, address?, phoneWa, timezone, ticketPrefix, defaultWarrantyDays, serviceTerms, printFormat, requireSignature, techniciansCanClaim }` | `{}` | VALIDATION |
 | extendSubscription | Super-admin | `{ tenantId, activeUntil, amountPaid?, note? }` | `{ activeUntil }` | VALIDATION, DATE_NOT_FUTURE |
 | resetOwnerPassword | Super-admin | `{ tenantId, tempPassword }` | `{}` | NOT_FOUND, VALIDATION |
+
+Efek aksi staf: `createStaff` dan `resetStaffPassword` mengisi `must_change_password = true`; `resetStaffPassword` dan `setStaffActive` (saat menonaktifkan) menghapus semua `sessions` staf itu; `resetStaffPassword` pada baris owner -> `NOT_FOUND`; `changePassword` mengosongkan `must_change_password`.
 
 Data baca (dashboard, laporan, daftar) dipanggil langsung dari Server Component lewat service, dengan aturan akses yang sama.
 Kode error umum: `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION`, `CONFLICT`, `SUBSCRIPTION_EXPIRED`, `RATE_LIMITED`, `INTERNAL`.

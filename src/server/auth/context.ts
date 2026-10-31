@@ -10,6 +10,7 @@ export interface SessionUser {
   email: string;
   role: UserRole;
   tenantId: string | null;
+  mustChangePassword: boolean;
 }
 
 export interface TenantContext {
@@ -28,8 +29,15 @@ export async function readSessionUser(
   if (!user?.isActive) {
     return null;
   }
-  const { id, name, email, role } = user;
-  return { id, name, email, role, tenantId: user.tenantId ?? null };
+  const { id, name, email, role, mustChangePassword } = user;
+  return {
+    id,
+    name,
+    email,
+    role,
+    tenantId: user.tenantId ?? null,
+    mustChangePassword,
+  };
 }
 
 /** Null when there is no active user, or the user has no tenant (super-admin). */
@@ -47,7 +55,7 @@ export function homePath(user: SessionUser) {
   return user.tenantId ? "/dashboard" : "/admin";
 }
 
-/** The signed-in user. Sends everyone else to login. */
+/** The signed-in user, for S-03 itself. Sends everyone else to login. */
 export const getSessionUser = cache(async () => {
   const user = await readSessionUser(await headers());
   if (!user) {
@@ -56,9 +64,18 @@ export const getSessionUser = cache(async () => {
   return user;
 });
 
+/** Holds a user with a temporary password at S-03 (PRD F-02). */
+const getClearedUser = cache(async () => {
+  const user = await getSessionUser();
+  if (user.mustChangePassword) {
+    redirect("/change-password");
+  }
+  return user;
+});
+
 /** The signed-in user's tenant, from the session only. Super-admins go to their panel. */
 export const getTenantContext = cache(async (): Promise<TenantContext> => {
-  const user = await getSessionUser();
+  const user = await getClearedUser();
   if (!user.tenantId) {
     redirect("/admin");
   }
@@ -77,7 +94,7 @@ export async function requirePageRole(roles: UserRole[]) {
 }
 
 export async function requireSuperAdmin() {
-  const user = await getSessionUser();
+  const user = await getClearedUser();
   if (user.role !== "super_admin") {
     redirect(ACCESS_DENIED_PATH);
   }

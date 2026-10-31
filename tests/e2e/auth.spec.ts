@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { fillLoginForm, PASSWORD, useOwnIp } from "./helpers";
+import { fillLoginForm, PASSWORD, assignOwnIp } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
-  await useOwnIp(page);
+  await assignOwnIp(page);
 });
 
 async function fillRegisterForm(page: Page, email: string) {

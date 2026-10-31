@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronDown, CircleUser, LogOut } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { ChevronDown, CircleUser, KeyRound, LogOut } from "lucide-react";
+import Link from "next/link";
 
+import { useLogout } from "@/components/auth/use-logout";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,8 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toastError } from "@/components/ui/sonner";
-import { authClient } from "@/lib/auth-client";
 import { USER_ROLE_LABELS, type UserRole } from "@/lib/user-role";
 
 interface UserMenuProps {
@@ -23,22 +22,7 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ name, email, role }: UserMenuProps) {
-  const router = useRouter();
-
-  async function logout() {
-    try {
-      const { error } = await authClient.signOut();
-      if (error) {
-        toastError("Terjadi kesalahan, coba lagi.");
-        return;
-      }
-      router.replace("/login");
-      // Otherwise the Back button can show pages cached for this session.
-      router.refresh();
-    } catch {
-      toastError("Koneksi terputus, coba lagi");
-    }
-  }
+  const logout = useLogout();
 
   return (
     <DropdownMenu>
@@ -60,6 +44,12 @@ export function UserMenu({ name, email, role }: UserMenuProps) {
           <p className="text-text-muted">{USER_ROLE_LABELS[role]}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/change-password">
+            <KeyRound strokeWidth={1.75} aria-hidden="true" />
+            Ganti password
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={logout}>
           <LogOut strokeWidth={1.75} aria-hidden="true" />
           Keluar

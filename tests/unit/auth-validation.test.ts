@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  changePasswordSchema,
   fieldErrors,
   loginSchema,
   registerShopSchema,
@@ -42,6 +43,30 @@ describe("registerShopSchema", () => {
     ["password", "1234567", "Password minimal 8 karakter"],
   ])("reports %s = %j", (field, value, message) => {
     expect(errorsFor({ [field]: value })).toEqual({ [field]: message });
+  });
+});
+
+describe("changePasswordSchema", () => {
+  it("rejects a new password equal to the current one", () => {
+    const result = changePasswordSchema.safeParse({
+      currentPassword: "sementara-123",
+      newPassword: "sementara-123",
+    });
+
+    expect(fieldErrors(result.error!)).toEqual({
+      newPassword: "Password baru harus berbeda dari password saat ini",
+    });
+  });
+
+  it("applies the minimum length to the new password", () => {
+    const result = changePasswordSchema.safeParse({
+      currentPassword: "sementara-123",
+      newPassword: "pendek",
+    });
+
+    expect(fieldErrors(result.error!)).toEqual({
+      newPassword: "Password baru minimal 8 karakter",
+    });
   });
 });
 

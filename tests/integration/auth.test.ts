@@ -155,6 +155,7 @@ describe("session user", () => {
       email: "teknisi@demo.test",
       role: "technician",
       tenantId: owner.tenantId,
+      mustChangePassword: false,
     });
     expect(homePath(user!)).toBe("/dashboard");
   });

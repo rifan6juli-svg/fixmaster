@@ -7,7 +7,7 @@ function randomOctet() {
 }
 
 /** Sign-in is limited per IP, so tests must not share one. */
-export async function useOwnIp(page: Page) {
+export async function assignOwnIp(page: Page) {
   await page.setExtraHTTPHeaders({
     "x-forwarded-for": `10.${randomOctet()}.${randomOctet()}.${randomOctet()}`,
   });
@@ -23,8 +23,8 @@ export async function fillLoginForm(
   await page.getByRole("button", { name: "Masuk" }).click();
 }
 
-export async function signIn(page: Page, email: string) {
+export async function signIn(page: Page, email: string, password = PASSWORD) {
   await page.goto("/login");
-  await fillLoginForm(page, email, PASSWORD);
+  await fillLoginForm(page, email, password);
   await expect(page).not.toHaveURL(/\/login/);
 }

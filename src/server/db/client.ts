@@ -4,6 +4,7 @@ import * as schema from "./schema";
 import { isLocalDatabaseUrl } from "./url";
 
 export type Database = PostgresJsDatabase<typeof schema>;
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 // Kept on globalThis so HMR does not open a new connection pool on every reload.
 const store = globalThis as typeof globalThis & { fixmasterDb?: Database };

@@ -1,6 +1,6 @@
 # AFD - Fixmaster
 
-> Versi: 0.3 | Diperbarui: 2026-10-31 | Merujuk: PRD.md (ID fitur F-xx)
+> Versi: 0.4 | Diperbarui: 2026-10-31 | Merujuk: PRD.md (ID fitur F-xx)
 
 ## 1. Peta Layar
 | ID | Layar | Rute/URL | Akses | Fitur terkait |
@@ -73,7 +73,7 @@ flowchart TD
 2. Sistem membuat akun dengan `must_change_password = true`; staf muncul di daftar.
 3. Staf login -> S-03 -> wajib membuat password baru (min 8, beda dari sementara) -> S-04.
 
-Aksi lain: "Nonaktifkan" (dialog konfirmasi, sesi staf dicabut), "Aktifkan", "Reset password" (dialog password sementara baru).
+Aksi lain: "Nonaktifkan" (dialog konfirmasi, sesi staf dicabut), "Aktifkan", "Reset password" (dialog password sementara baru; sesi staf dicabut dan staf wajib lewat S-03 lagi). S-15 dibuka dari S-16. Semua user bisa membuka S-03 sendiri lewat menu pengguna ("Ganti password"); user yang wajib mengganti password hanya punya tombol "Keluar" sebagai jalan lain.
 
 **Alur alternatif / gagal:**
 - Email sudah dipakai -> pesan di field email.

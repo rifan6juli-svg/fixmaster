@@ -1,12 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import * as React from "react";
 
+import { callAction } from "@/components/call-action";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { toastError } from "@/components/ui/sonner";
 import type { ActionResult } from "@/lib/action-result";
 import {
   fieldErrors,
@@ -16,7 +15,7 @@ import {
 
 interface RegisterFormProps {
   /** Passed in by the page: Client Components never import src/server/**. */
-  action: (input: RegisterShopForm) => Promise<ActionResult<null>>;
+  action: (input: RegisterShopForm) => Promise<ActionResult<never>>;
 }
 
 interface RegisterState {
@@ -25,7 +24,6 @@ interface RegisterState {
 }
 
 export function RegisterForm({ action }: RegisterFormProps) {
-  const router = useRouter();
   const formRef = React.useRef<HTMLFormElement>(null);
 
   async function submit(
@@ -38,20 +36,8 @@ export function RegisterForm({ action }: RegisterFormProps) {
       return { values, errors: fieldErrors(parsed.error) };
     }
 
-    try {
-      const result = await action(values);
-      if (result.ok) {
-        router.replace("/dashboard");
-        return { values, errors: {} };
-      }
-      if (result.error.fields) {
-        return { values, errors: result.error.fields };
-      }
-      toastError(result.error.message);
-    } catch {
-      toastError("Koneksi terputus, coba lagi");
-    }
-    return { values, errors: {} };
+    const result = await callAction(() => action(values));
+    return { values, errors: result.ok ? {} : (result.error.fields ?? {}) };
   }
 
   // A form action rather than onSubmit: React holds a submit made before

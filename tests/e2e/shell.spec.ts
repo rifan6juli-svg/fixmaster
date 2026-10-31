@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import postgres from "postgres";
 import { e2eDatabaseUrl } from "../helpers/test-db";
-import { signIn, useOwnIp } from "./helpers";
+import { signIn, assignOwnIp } from "./helpers";
 
 const OWNER = "owner@demo.test";
 const ADMIN = "admin@demo.test";
@@ -57,7 +57,7 @@ async function expectNoHorizontalScroll(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await useOwnIp(page);
+  await assignOwnIp(page);
 });
 
 test.describe("menu per role", () => {
@@ -283,7 +283,7 @@ test.describe("layout", () => {
     await signIn(page, OWNER);
     await expectNoHorizontalScroll(page);
 
-    for (const path of ["/tickets", "/reports"]) {
+    for (const path of ["/tickets", "/reports", "/settings/staff"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await expectNoHorizontalScroll(page);

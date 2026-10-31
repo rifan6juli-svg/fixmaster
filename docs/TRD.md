@@ -1,6 +1,6 @@
 # TRD - Fixmaster
 
-> Versi: 0.7 | Diperbarui: 2026-10-31 | Merujuk: PRD.md
+> Versi: 0.8 | Diperbarui: 2026-10-31 | Merujuk: PRD.md
 
 ## 1. Tech Stack
 | Lapisan | Pilihan | Alasan (1 kalimat) |
@@ -70,13 +70,14 @@ src/
     ui/                   # primitif shadcn yang sudah diberi token DBD
     brand/                # mascot.tsx, logo.tsx
     app-shell/            # sidebar + rail, bottom bar, header, menu user, nav-items.ts (menu per peran)
-    auth/ tickets/ customers/ parts/ ...   # komponen per fitur
+    auth/ staff/ tickets/ customers/ parts/ ...   # komponen per fitur
+    call-action.ts        # memanggil Server Action dari klien (toast + redirect)
   lib/                    # util murni yang aman untuk klien: money.ts, phone.ts, wa.ts, dates.ts, logger.ts,
                           # safe-next.ts, user-role.ts, action-result.ts, auth-client.ts, validation/*.ts (skema Zod)
   server/
     db/                   # client.ts, url.ts (pengaman host lokal), schema/*.ts
     auth/                 # auth.ts (konfigurasi Better Auth), context.ts, guards.ts
-    services/             # shops.ts, tickets.ts, customers.ts, parts.ts, payments.ts, reports.ts, ...
+    services/             # accounts.ts, shops.ts, staff.ts, tickets.ts, customers.ts, parts.ts, payments.ts, reports.ts, ...
     actions/              # Server Actions (tipis: validasi -> service), result.ts (toActionResult)
     crypto/               # device-secret.ts
     errors.ts             # AppError (kode error BSD bagian 6)
@@ -90,8 +91,8 @@ tests/
 - Bahasa & mode ketat: TypeScript `strict` + `noUncheckedIndexedAccess`.
 - Penamaan: file `kebab-case.ts(x)`; komponen `PascalCase`; tabel & kolom DB `snake_case` jamak; properti TS `camelCase` (dipetakan Drizzle); route URL bahasa Inggris; teks UI Bahasa Indonesia.
 - Akses data: hanya `src/server/**` yang boleh mengimpor `src/server/db`. Setiap fungsi service menerima `ctx: TenantContext` sebagai argumen pertama dan selalu memfilter `tenant_id = ctx.tenantId`. `tenant_id` **tidak pernah** diambil dari input klien. Setiap service baru wajib punya tes isolasi dua tenant.
-- Validasi input: skema Zod di `src/lib/validation/` (dipakai form dan Server Action) di setiap Server Action sebelum memanggil service.
-- Form: memakai `<form action={fn}>` + `useActionState`, bukan `onSubmit`, agar React menahan submit sebelum hidrasi dan browser tidak pernah mengirim form sendiri (tanpa ini password bisa masuk URL). Nilai dikembalikan lewat state ke `defaultValue` karena React mereset form setelah action. Client Component menerima Server Action sebagai prop dari halaman, bukan mengimpornya.
+- Validasi input: skema Zod di `src/lib/validation/` (dipakai form dan Server Action), dijalankan `parseInput()` di setiap Server Action sebelum memanggil service.
+- Form: memakai `<form action={fn}>` + `useActionState`, bukan `onSubmit`, agar React menahan submit sebelum hidrasi dan browser tidak pernah mengirim form sendiri (tanpa ini password bisa masuk URL). Nilai dikembalikan lewat state ke `defaultValue` karena React mereset form setelah action. Client Component menerima Server Action sebagai prop dari halaman, bukan mengimpornya, dan memanggilnya lewat `callAction()`: Server Action yang `redirect()` membuat promise di klien gagal, jadi `catch` biasa akan salah melapor "Koneksi terputus".
 - Penanganan error: Server Action mengembalikan `ActionResult<T>` = `{ ok: true, data }` atau `{ ok: false, error: { code, message, fields? } }` lewat `toActionResult()`; service melempar `AppError`, kode error mengikuti BSD bagian 6. Error tak terduga dicatat lewat `logger.error` (nama + kode saja, pesan Drizzle memuat parameter query) dan ditampilkan sebagai "Terjadi kesalahan, coba lagi."
 - Konkurensi: update tiket menyertakan `updated_at` yang dibaca klien; jika tidak cocok kembalikan `CONFLICT`.
 - Transaksi: di dalam `db.transaction()` semua query wajib memakai `tx`, bukan `db` (dengan `max: 1` query lewat `db` akan menggantung). Jangan memakai fitur sesi Postgres (`SET`, advisory lock sesi, `LISTEN`) karena tidak didukung pooler mode transaction.
@@ -103,7 +104,9 @@ tests/
 ## 5. Keamanan
 - Autentikasi: Better Auth email + password (hash bawaan scrypt), cookie sesi `httpOnly`, `secure` (dari `BETTER_AUTH_URL` https), `sameSite=lax`; sesi 7 hari, diperpanjang otomatis jika aktif. Render halaman tidak bisa menulis cookie, jadi `SessionRefresher` di layout `(app)` memanggil `/api/auth/get-session` saat halaman dimuat. Rate limit bawaan Better Auth dengan penyimpanan database (PRD F-01); login lewat klien ke `/api/auth/sign-in/email` karena `auth.api` di server tidak terkena rate limit.
 - Rute Better Auth yang dibuka hanya sign-in, sign-out, dan sesi: `disableSignUp` aktif, `/update-user` dan `/change-password` ada di `disabledPaths`, dan semua `additionalFields` memakai `input: false`.
-- Akun dibuat server-side: insert `users` + `accounts` (provider `credential`, `account_id` = id user) dalam satu transaksi, password di-hash dengan `hashPassword` dari `better-auth/crypto`.
+- Akun dibuat server-side lewat `insertUserWithLogin()`: insert `users` + `accounts` (provider `credential`, `account_id` = id user) dalam satu transaksi, password di-hash dengan `hashPassword` dari `better-auth/crypto` sebelum transaksi dibuka.
+- `must_change_password`: `getTenantContext()` dan `requireSuperAdmin()` menahan user di `/change-password`, jadi halaman dan Server Action sama-sama tertutup sampai password diganti. `changePassword` memakai `getSessionUser()` yang tidak menahan. Setelah berhasil, form memuat ulang halaman penuh (`window.location.assign`): router klien menyimpan redirect `/dashboard` -> S-03 dan memutarnya ulang tanpa bertanya ke server, dan `refresh()` maupun `redirect()` dari Server Action tidak membersihkannya. Perubahan lain yang mengubah hasil guard untuk halaman yang sudah pernah dibuka harus mengikuti pola ini. Menonaktifkan staf dan mereset password mencabut semua sesinya dalam transaksi yang sama.
+- Layout yang dipakai bersama tidak dirender ulang saat navigasi di klien, jadi guard di layout saja tidak cukup: setiap halaman yang membaca data dan setiap Server Action wajib memanggil `getTenantContext()` sendiri.
 - Otorisasi: `requireRole(ctx, roles)` di setiap Server Action; matriks lengkap di BSD bagian 5. `getTenantContext()` (sesi di database, cek `is_active`) adalah pemeriksaan sebenarnya, dipanggil layout `(app)` di dalam `<Suspense>` dan setiap Server Action. `src/proxy.ts` hanya melihat keberadaan cookie agar tamu mendapat redirect 307 dengan `?next=` sebelum render; layout tidak bisa membaca path. Hasil sesi tidak di-cache (`use cache: private` dilarang di sini) agar penonaktifan staf langsung berlaku. Akses halaman per peran memakai `requirePageRole(roles)` di layout route group `(owner)`/`(front-desk)`, jadi halaman baru di dalamnya otomatis terlindungi; peran lain diarahkan ke `/dashboard?denied=1` dan `AccessDeniedToast` menampilkan pesan AFD bagian 5. `admin/` hanya untuk `super_admin` (`requireSuperAdmin()`), dan `getTenantContext()` mengarahkan `super_admin` ke `/admin`.
 - Data sensitif: `tickets.lock_secret_enc` dienkripsi AES-256-GCM dengan kunci `DEVICE_SECRET_KEY` (32 byte, base64), format `v1:{iv}:{tag}:{ciphertext}`. Token status publik = 16 byte acak (`base64url`, 22 karakter).
 - Header: `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options: nosniff`; halaman `/s/*` dan `/print/*` diberi `noindex`.
