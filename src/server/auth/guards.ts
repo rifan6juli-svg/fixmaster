@@ -1,5 +1,6 @@
+import type { UserRole } from "@/lib/user-role";
 import { AppError } from "@/server/errors";
-import type { TenantContext, UserRole } from "./context";
+import type { TenantContext } from "./context";
 
 export function requireRole(ctx: TenantContext, roles: UserRole[]) {
   if (!roles.includes(ctx.role)) {

@@ -1,6 +1,10 @@
 import { count, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { readTenantContext } from "@/server/auth/context";
+import {
+  homePath,
+  readSessionUser,
+  readTenantContext,
+} from "@/server/auth/context";
 import type { Database } from "@/server/db/client";
 import { rateLimits, sessions, tenants, users } from "@/server/db/schema";
 import { seedDatabase } from "../../scripts/seed-data";
@@ -135,6 +139,50 @@ describe("tenant context", () => {
 
     expect(response.status).toBe(200);
     expect(await contextFor(cookie)).toBeNull();
+  });
+});
+
+describe("session user", () => {
+  it("reads a shop user, whose home is the dashboard", async () => {
+    const { cookie } = await signIn("teknisi@demo.test", PASSWORD);
+    const owner = await userByEmail("teknisi@demo.test");
+
+    const user = await readSessionUser(new Headers({ cookie }));
+
+    expect(user).toEqual({
+      id: owner.id,
+      name: "Andi Pratama",
+      email: "teknisi@demo.test",
+      role: "technician",
+      tenantId: owner.tenantId,
+    });
+    expect(homePath(user!)).toBe("/dashboard");
+  });
+
+  it("reads a super-admin, whose home is the admin panel", async () => {
+    const { cookie } = await signIn("admin@fixmaster.test", PASSWORD);
+
+    const user = await readSessionUser(new Headers({ cookie }));
+
+    expect(user).toMatchObject({ role: "super_admin", tenantId: null });
+    expect(homePath(user!)).toBe("/admin");
+  });
+
+  it("is null for a guest", async () => {
+    expect(await readSessionUser(new Headers())).toBeNull();
+  });
+
+  it("is null once the user is deactivated", async () => {
+    const { cookie } = await signIn("admin@demo.test", PASSWORD);
+    const user = await userByEmail("admin@demo.test");
+    await db
+      .update(users)
+      .set({ isActive: false })
+      .where(eq(users.id, user.id));
+
+    expect(await readSessionUser(new Headers({ cookie }))).toBeNull();
+
+    await db.update(users).set({ isActive: true }).where(eq(users.id, user.id));
   });
 });
 

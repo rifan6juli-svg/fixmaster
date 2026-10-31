@@ -1,41 +1,44 @@
 import { Suspense } from "react";
 
-import { LogoutButton } from "@/components/auth/logout-button";
+import { AppHeader } from "@/components/app-shell/app-header";
+import { BottomBar } from "@/components/app-shell/bottom-bar";
+import { Sidebar } from "@/components/app-shell/sidebar";
+import {
+  AppShellSkeleton,
+  ContentSkeleton,
+} from "@/components/app-shell/skeletons";
+import { UserMenu } from "@/components/app-shell/user-menu";
 import { SessionRefresher } from "@/components/auth/session-refresher";
-import { Logo } from "@/components/brand/logo";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getTenantContext } from "@/server/auth/context";
+import { getSessionUser, getTenantContext } from "@/server/auth/context";
 
-function ContentSkeleton() {
+// Inside <Suspense>, and the page only renders once the session is confirmed.
+async function AppShell({ children }: { children: React.ReactNode }) {
+  const { role } = await getTenantContext();
+  const { name, email } = await getSessionUser();
+
   return (
-    <div aria-busy="true" className="grid gap-4">
-      <span className="sr-only">Memuat data…</span>
-      <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-24 w-full" />
+    <div className="flex min-h-dvh flex-col">
+      <SessionRefresher />
+      <AppHeader homeHref="/dashboard">
+        <UserMenu name={name} email={email} role={role} />
+      </AppHeader>
+      <div className="flex flex-1">
+        <Sidebar role={role} />
+        <main className="min-w-0 flex-1 px-4 pt-6 pb-[calc(1.5rem+var(--fm-bottom-bar-height)+env(safe-area-inset-bottom))]">
+          <div className="mx-auto max-w-7xl">
+            <Suspense fallback={<ContentSkeleton />}>{children}</Suspense>
+          </div>
+        </main>
+      </div>
+      <BottomBar role={role} />
     </div>
   );
 }
 
-// Inside <Suspense> so the session read does not hold back the app chrome. The
-// page only renders once the session is confirmed.
-async function SessionGate({ children }: { children: React.ReactNode }) {
-  await getTenantContext();
-  return children;
-}
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <SessionRefresher />
-      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-2">
-        <Logo />
-        <LogoutButton />
-      </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
-        <Suspense fallback={<ContentSkeleton />}>
-          <SessionGate>{children}</SessionGate>
-        </Suspense>
-      </main>
-    </>
+    <Suspense fallback={<AppShellSkeleton />}>
+      <AppShell>{children}</AppShell>
+    </Suspense>
   );
 }

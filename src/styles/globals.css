@@ -31,7 +31,7 @@
   --fm-elevation-raised:
     0 1px 2px rgb(17 20 25 / 0.06), 0 2px 6px rgb(17 20 25 / 0.08);
 
-  /* Height of the mobile bottom bar; the app shell (IPD step 5) sets it so toasts sit above it. */
+  /* Height of the mobile bottom bar, so toasts and page content sit above it. */
   --fm-bottom-bar-height: 0px;
 
   /* Mascot tokens: identical in both modes (the mascot is a physical object). */
@@ -69,6 +69,13 @@
     --fm-danger-hover: #fa8a8a;
     --fm-on-danger: #111419;
     --fm-elevation-raised: none;
+  }
+}
+
+/* The app shell shows the bottom bar under 640px; other pages keep 0px. */
+@media (width < 40rem) {
+  :root:has([data-slot="bottom-bar"]) {
+    --fm-bottom-bar-height: 3.5rem;
   }
 }
 

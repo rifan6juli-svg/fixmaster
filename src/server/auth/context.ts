@@ -1,9 +1,16 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import type { UserRole } from "@/lib/user-role";
 import { getAuth } from "./auth";
 
-export type UserRole = "owner" | "admin" | "technician" | "super_admin";
+export interface SessionUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  tenantId: string | null;
+}
 
 export interface TenantContext {
   tenantId: string;
@@ -11,24 +18,68 @@ export interface TenantContext {
   role: UserRole;
 }
 
-/** Null for guests, deactivated users, and super-admins (who have no tenant). */
-export async function readTenantContext(
+/** Null for guests and deactivated users. */
+export async function readSessionUser(
   requestHeaders: Headers,
-): Promise<TenantContext | null> {
+): Promise<SessionUser | null> {
   const session = await getAuth().api.getSession({ headers: requestHeaders });
   const user = session?.user;
 
-  if (!user?.isActive || !user.tenantId) {
+  if (!user?.isActive) {
+    return null;
+  }
+  const { id, name, email, role } = user;
+  return { id, name, email, role, tenantId: user.tenantId ?? null };
+}
+
+/** Null when there is no active user, or the user has no tenant (super-admin). */
+export async function readTenantContext(
+  requestHeaders: Headers,
+): Promise<TenantContext | null> {
+  const user = await readSessionUser(requestHeaders);
+  if (!user?.tenantId) {
     return null;
   }
   return { tenantId: user.tenantId, userId: user.id, role: user.role };
 }
 
-/** The signed-in user's tenant, from the session only. Sends everyone else to login. */
-export const getTenantContext = cache(async () => {
-  const ctx = await readTenantContext(await headers());
-  if (!ctx) {
+export function homePath(user: SessionUser) {
+  return user.tenantId ? "/dashboard" : "/admin";
+}
+
+/** The signed-in user. Sends everyone else to login. */
+export const getSessionUser = cache(async () => {
+  const user = await readSessionUser(await headers());
+  if (!user) {
     redirect("/login");
   }
-  return ctx;
+  return user;
 });
+
+/** The signed-in user's tenant, from the session only. Super-admins go to their panel. */
+export const getTenantContext = cache(async (): Promise<TenantContext> => {
+  const user = await getSessionUser();
+  if (!user.tenantId) {
+    redirect("/admin");
+  }
+  return { tenantId: user.tenantId, userId: user.id, role: user.role };
+});
+
+const ACCESS_DENIED_PATH = "/dashboard?denied=1";
+
+/** For pages: other roles go to S-04 with the message from AFD section 5. */
+export async function requirePageRole(roles: UserRole[]) {
+  const ctx = await getTenantContext();
+  if (!roles.includes(ctx.role)) {
+    redirect(ACCESS_DENIED_PATH);
+  }
+  return ctx;
+}
+
+export async function requireSuperAdmin() {
+  const user = await getSessionUser();
+  if (user.role !== "super_admin") {
+    redirect(ACCESS_DENIED_PATH);
+  }
+  return user;
+}

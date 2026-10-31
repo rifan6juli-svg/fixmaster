@@ -1,13 +1,9 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 import { TICKET_STATUSES } from "../../../lib/ticket-status";
+import { USER_ROLES } from "../../../lib/user-role";
 
 // Enum values from docs/BSD.md section 4.
-export const userRole = pgEnum("user_role", [
-  "owner",
-  "admin",
-  "technician",
-  "super_admin",
-]);
+export const userRole = pgEnum("user_role", USER_ROLES);
 
 export const deviceType = pgEnum("device_type", [
   "laptop",

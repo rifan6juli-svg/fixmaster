@@ -53,6 +53,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
         closeButton
         richColors
         containerAriaLabel="Notifikasi"
+        // sonner's mobile layout stops at 600px, the bottom bar at 640px.
+        offset={{
+          bottom:
+            "calc(24px + var(--fm-bottom-bar-height) + env(safe-area-inset-bottom))",
+        }}
         mobileOffset={{
           bottom:
             "calc(16px + var(--fm-bottom-bar-height) + env(safe-area-inset-bottom))",
@@ -101,7 +106,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
  */
 function toastError(
   message: string,
-  options?: Pick<ExternalToast, "action" | "description">,
+  options?: Pick<ExternalToast, "action" | "description" | "id">,
 ) {
   announceListeners.forEach((announce) => announce(message));
   // Hidden from assistive tech: the assertive region above already announced it.

@@ -1,16 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+import { fillLoginForm, PASSWORD, useOwnIp } from "./helpers";
 
-const PASSWORD = "password123";
-
-function randomOctet() {
-  return Math.floor(Math.random() * 254) + 1;
-}
-
-// Sign-in is limited per IP, so tests must not share one.
 test.beforeEach(async ({ page }) => {
-  await page.setExtraHTTPHeaders({
-    "x-forwarded-for": `10.${randomOctet()}.${randomOctet()}.${randomOctet()}`,
-  });
+  await useOwnIp(page);
 });
 
 async function fillRegisterForm(page: Page, email: string) {
@@ -19,12 +11,6 @@ async function fillRegisterForm(page: Page, email: string) {
   await page.getByLabel("Nomor WA toko").fill("0812-3456-7890");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("rahasia-123");
-}
-
-async function fillLoginForm(page: Page, email: string, password: string) {
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Masuk" }).click();
 }
 
 test.describe("registration", () => {
@@ -41,6 +27,11 @@ test.describe("registration", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Dashboard" }),
     ).toBeVisible();
+
+    // AFD F-01: a new shop lands on the first-time state.
+    await expect(page.locator('[data-slot="empty-state"] svg')).toBeVisible();
+    await page.getByRole("link", { name: "Terima unit pertama" }).click();
+    await expect(page).toHaveURL("/tickets/new");
   });
 
   test("shows a taken email on its field and keeps the form", async ({
@@ -212,7 +203,8 @@ test.describe("signed-in session", () => {
   test("logs out, and Back does not reopen the app", async ({ page }) => {
     await page.goto("/dashboard?from=history");
 
-    await page.getByRole("button", { name: "Keluar" }).click();
+    await page.getByRole("button", { name: "Menu pengguna" }).click();
+    await page.getByRole("menuitem", { name: "Keluar" }).click();
     await expect(page).toHaveURL("/login");
 
     await page.goBack();

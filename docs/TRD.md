@@ -1,6 +1,6 @@
 # TRD - Fixmaster
 
-> Versi: 0.6 | Diperbarui: 2026-10-31 | Merujuk: PRD.md
+> Versi: 0.7 | Diperbarui: 2026-10-31 | Merujuk: PRD.md
 
 ## 1. Tech Stack
 | Lapisan | Pilihan | Alasan (1 kalimat) |
@@ -57,8 +57,10 @@ supabase/                 # config.toml Supabase lokal (tanpa migrasi; migrasi a
 src/
   app/
     (auth)/               # login, register, change-password
-    (app)/                # layout terproteksi: dashboard, tickets, customers, parts, reports, settings
-    admin/                # panel super-admin
+    (app)/                # layout terproteksi + shell navigasi: dashboard, tickets, parts
+      (front-desk)/       # layout requirePageRole owner + admin: tickets/new, customers
+      (owner)/            # layout requirePageRole owner: reports, settings
+    admin/                # panel super-admin (layout requireSuperAdmin)
     s/[token]/            # halaman status publik
     print/                # receipt/[id], invoice/[id]
     api/auth/[...all]/    # handler Better Auth
@@ -67,9 +69,10 @@ src/
   components/
     ui/                   # primitif shadcn yang sudah diberi token DBD
     brand/                # mascot.tsx, logo.tsx
+    app-shell/            # sidebar + rail, bottom bar, header, menu user, nav-items.ts (menu per peran)
     auth/ tickets/ customers/ parts/ ...   # komponen per fitur
   lib/                    # util murni yang aman untuk klien: money.ts, phone.ts, wa.ts, dates.ts, logger.ts,
-                          # safe-next.ts, action-result.ts, auth-client.ts, validation/*.ts (skema Zod)
+                          # safe-next.ts, user-role.ts, action-result.ts, auth-client.ts, validation/*.ts (skema Zod)
   server/
     db/                   # client.ts, url.ts (pengaman host lokal), schema/*.ts
     auth/                 # auth.ts (konfigurasi Better Auth), context.ts, guards.ts
@@ -101,7 +104,7 @@ tests/
 - Autentikasi: Better Auth email + password (hash bawaan scrypt), cookie sesi `httpOnly`, `secure` (dari `BETTER_AUTH_URL` https), `sameSite=lax`; sesi 7 hari, diperpanjang otomatis jika aktif. Render halaman tidak bisa menulis cookie, jadi `SessionRefresher` di layout `(app)` memanggil `/api/auth/get-session` saat halaman dimuat. Rate limit bawaan Better Auth dengan penyimpanan database (PRD F-01); login lewat klien ke `/api/auth/sign-in/email` karena `auth.api` di server tidak terkena rate limit.
 - Rute Better Auth yang dibuka hanya sign-in, sign-out, dan sesi: `disableSignUp` aktif, `/update-user` dan `/change-password` ada di `disabledPaths`, dan semua `additionalFields` memakai `input: false`.
 - Akun dibuat server-side: insert `users` + `accounts` (provider `credential`, `account_id` = id user) dalam satu transaksi, password di-hash dengan `hashPassword` dari `better-auth/crypto`.
-- Otorisasi: `requireRole(ctx, roles)` di setiap Server Action; matriks lengkap di BSD bagian 5. `getTenantContext()` (sesi di database, cek `is_active`) adalah pemeriksaan sebenarnya, dipanggil layout `(app)` di dalam `<Suspense>` dan setiap Server Action. `src/proxy.ts` hanya melihat keberadaan cookie agar tamu mendapat redirect 307 dengan `?next=` sebelum render; layout tidak bisa membaca path. Hasil sesi tidak di-cache (`use cache: private` dilarang di sini) agar penonaktifan staf langsung berlaku. `admin/` hanya untuk `super_admin`.
+- Otorisasi: `requireRole(ctx, roles)` di setiap Server Action; matriks lengkap di BSD bagian 5. `getTenantContext()` (sesi di database, cek `is_active`) adalah pemeriksaan sebenarnya, dipanggil layout `(app)` di dalam `<Suspense>` dan setiap Server Action. `src/proxy.ts` hanya melihat keberadaan cookie agar tamu mendapat redirect 307 dengan `?next=` sebelum render; layout tidak bisa membaca path. Hasil sesi tidak di-cache (`use cache: private` dilarang di sini) agar penonaktifan staf langsung berlaku. Akses halaman per peran memakai `requirePageRole(roles)` di layout route group `(owner)`/`(front-desk)`, jadi halaman baru di dalamnya otomatis terlindungi; peran lain diarahkan ke `/dashboard?denied=1` dan `AccessDeniedToast` menampilkan pesan AFD bagian 5. `admin/` hanya untuk `super_admin` (`requireSuperAdmin()`), dan `getTenantContext()` mengarahkan `super_admin` ke `/admin`.
 - Data sensitif: `tickets.lock_secret_enc` dienkripsi AES-256-GCM dengan kunci `DEVICE_SECRET_KEY` (32 byte, base64), format `v1:{iv}:{tag}:{ciphertext}`. Token status publik = 16 byte acak (`base64url`, 22 karakter).
 - Header: `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options: nosniff`; halaman `/s/*` dan `/print/*` diberi `noindex`.
 - Secrets: lewat environment variable, daftar di `.env.example`.
