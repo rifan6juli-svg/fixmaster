@@ -11,3 +11,8 @@ export function normalizePhoneWa(input: string) {
   const phone = digits.replace(/^0/, "62").replace(/^8/, "628");
   return INDONESIAN_PHONE.test(phone) ? phone : null;
 }
+
+/** 6281234567890 -> 0812 3456 7890, the way shops read and type numbers. */
+export function formatPhoneWa(phone: string) {
+  return `0${phone.slice(2)}`.replace(/(\d{4})(?=\d)/g, "$1 ");
+}

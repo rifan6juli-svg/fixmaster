@@ -1,5 +1,11 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { fillLoginForm, signIn, assignOwnIp } from "./helpers";
+import {
+  assignOwnIp,
+  expectToast,
+  fillLoginForm,
+  signIn,
+  toast,
+} from "./helpers";
 
 const OWNER = "owner@demo.test";
 const TEMP_PASSWORD = "sementara-123";
@@ -17,20 +23,6 @@ function staffEntry(page: Page, email: string) {
   return page.locator("tr:visible, li:visible").filter({ hasText: email });
 }
 
-function toast(page: Page, text: string) {
-  return page.getByRole("region", { name: /Notifikasi/ }).getByText(text);
-}
-
-/**
- * Checks a toast and closes it. On a phone it covers the bottom of the list, and
- * its timer stops while the test's mouse rests on it, so a later click would hang.
- */
-async function expectToast(page: Page, text: string) {
-  await expect(toast(page, text)).toBeVisible();
-  await page.getByRole("button", { name: "Tutup notifikasi" }).first().click();
-  await expect(toast(page, text)).toHaveCount(0);
-}
-
 async function openOwnerStaffPage(page: Page) {
   await assignOwnIp(page);
   await signIn(page, OWNER);
@@ -44,7 +36,15 @@ async function addStaff(page: Page, email: string, role = "Teknisi") {
   await dialog.getByLabel("Email").fill(email);
   await dialog.getByLabel("Peran").selectOption({ label: role });
   await dialog.getByLabel("Password sementara").fill(TEMP_PASSWORD);
-  await dialog.getByRole("button", { name: "Simpan" }).click();
+  await dialog.getByRole("button", { name: "Buat akun" }).click();
+}
+
+/** Reads the password off the dialog, as an owner does, then closes it. */
+async function finishHandoff(page: Page, title: string) {
+  const dialog = page.getByRole("dialog", { name: title });
+  await expect(dialog.getByText(TEMP_PASSWORD)).toBeVisible();
+  await dialog.getByRole("button", { name: "Selesai" }).click();
+  await expect(dialog).toHaveCount(0);
 }
 
 /** A second browser for the staff member, beside the owner's. */
@@ -69,8 +69,19 @@ test.describe("new staff", () => {
     const email = newStaffEmail(testInfo.project.name);
     await openOwnerStaffPage(page);
 
+    await page
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"]);
     await addStaff(page, email);
-    await expectToast(page, "Akun Staf Uji dibuat");
+    const handoff = page.getByRole("dialog", { name: "Akun Staf Uji dibuat" });
+    await handoff.getByRole("button", { name: "Salin" }).click();
+    await expect(
+      handoff.getByRole("button", { name: "Tersalin" }),
+    ).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
+      TEMP_PASSWORD,
+    );
+    await finishHandoff(page, "Akun Staf Uji dibuat");
     await expect(staffEntry(page, email)).toContainText("Teknisi");
 
     const staffPage = await openStaffPage(browser);
@@ -89,6 +100,7 @@ test.describe("new staff", () => {
 
     await changeTempPassword(staffPage);
     await expect(staffPage).toHaveURL("/dashboard");
+    await expect(toast(staffPage, "Password berhasil diganti")).toBeVisible();
 
     await staffPage.reload();
     await expect(staffPage).toHaveURL("/dashboard");
@@ -109,6 +121,30 @@ test.describe("new staff", () => {
   });
 });
 
+test.describe("the add staff dialog", () => {
+  test("stays reachable on a short screen and survives a stray tap", async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop");
+    await page.setViewportSize({ width: 844, height: 390 });
+    await openOwnerStaffPage(page);
+
+    await page.getByRole("button", { name: "Tambah staf" }).click();
+    const dialog = page.getByRole("dialog", { name: "Tambah staf" });
+    await dialog.getByRole("button", { name: "Buat akun" }).click();
+
+    await expect(dialog.getByText("Nama wajib diisi")).toBeVisible();
+    await expect(dialog.getByLabel("Nama")).toBeFocused();
+    const box = await dialog.boundingBox();
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(390);
+
+    await dialog.getByLabel("Nama").fill("Masih Terisi");
+    await page.mouse.click(4, 4);
+    await expect(dialog.getByLabel("Nama")).toHaveValue("Masih Terisi");
+  });
+});
+
 test.describe("managing staff", () => {
   test("offers no actions on the owner's row", async ({ page }) => {
     await openOwnerStaffPage(page);
@@ -124,7 +160,7 @@ test.describe("managing staff", () => {
     const email = newStaffEmail(testInfo.project.name);
     await openOwnerStaffPage(page);
     await addStaff(page, email);
-    await expectToast(page, "Akun Staf Uji dibuat");
+    await finishHandoff(page, "Akun Staf Uji dibuat");
 
     const staffPage = await openStaffPage(browser);
     await signIn(staffPage, email, TEMP_PASSWORD);
@@ -169,7 +205,7 @@ test.describe("managing staff", () => {
     const email = newStaffEmail(testInfo.project.name);
     await openOwnerStaffPage(page);
     await addStaff(page, email);
-    await expectToast(page, "Akun Staf Uji dibuat");
+    await finishHandoff(page, "Akun Staf Uji dibuat");
 
     const staffPage = await openStaffPage(browser);
     await signIn(staffPage, email, TEMP_PASSWORD);
@@ -181,8 +217,8 @@ test.describe("managing staff", () => {
       .click();
     const dialog = page.getByRole("dialog", { name: /^Reset password/ });
     await dialog.getByLabel("Password sementara").fill(TEMP_PASSWORD);
-    await dialog.getByRole("button", { name: "Simpan" }).click();
-    await expect(toast(page, "Password Staf Uji direset")).toBeVisible();
+    await dialog.getByRole("button", { name: "Reset password" }).click();
+    await finishHandoff(page, "Password Staf Uji direset");
 
     await staffPage.reload();
     await expect(staffPage).toHaveURL("/login");
@@ -214,10 +250,10 @@ test.describe("a new shop", () => {
     await assignOwnIp(page);
     await page.goto("/register");
     await page.getByLabel("Nama toko").fill("Toko Tanpa Staf");
-    await page.getByLabel("Nama owner").fill("Pemilik Baru");
+    await page.getByLabel("Nama pemilik toko").fill("Pemilik Baru");
     await page.getByLabel("Nomor WA toko").fill("0812-3456-7890");
     await page.getByLabel("Email").fill(newStaffEmail(testInfo.project.name));
-    await page.getByLabel("Password").fill(TEMP_PASSWORD);
+    await page.getByLabel("Password", { exact: true }).fill(TEMP_PASSWORD);
     await page.getByRole("button", { name: "Daftar & mulai trial" }).click();
     await expect(page).toHaveURL("/dashboard");
 
@@ -225,6 +261,7 @@ test.describe("a new shop", () => {
     await expect(page.getByText("Belum ada staf")).toBeVisible();
 
     await addStaff(page, newStaffEmail(testInfo.project.name), "Admin/Kasir");
+    await finishHandoff(page, "Akun Staf Uji dibuat");
 
     await expect(page.getByText("Belum ada staf")).toHaveCount(0);
     await expect(

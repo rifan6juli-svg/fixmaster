@@ -19,7 +19,7 @@ export function AppShellSkeleton() {
         <Skeleton className="h-8 w-28" />
       </AppHeader>
       <div className="flex flex-1">
-        <div className="hidden w-16 shrink-0 flex-col gap-2 border-r border-border bg-surface px-2 py-4 sm:flex lg:w-60 lg:px-3">
+        <div className="hidden w-22 shrink-0 flex-col gap-2 border-r border-border bg-surface px-2 py-4 sm:flex lg:w-60 lg:px-3">
           <Skeleton className="h-11 w-full" />
           <Skeleton className="h-11 w-full" />
           <Skeleton className="h-11 w-full" />

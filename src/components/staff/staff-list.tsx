@@ -32,6 +32,7 @@ function RowActions({ member }: { member: StaffMember }) {
     <StaffActions
       userId={member.id}
       name={member.name}
+      email={member.email}
       isActive={member.isActive}
       setActive={setStaffActive}
       resetPassword={resetStaffPassword}
@@ -58,11 +59,13 @@ export function StaffList({ staff }: { staff: StaffMember[] }) {
           <TableBody>
             {staff.map((member) => (
               <TableRow key={member.id}>
-                <TableCell>
-                  <p className="font-medium">{member.name}</p>
-                  <p className="text-text-muted">{member.email}</p>
+                <TableCell className="w-full max-w-0">
+                  <p className="truncate font-medium">{member.name}</p>
+                  <p className="truncate text-text-muted">{member.email}</p>
                 </TableCell>
-                <TableCell>{USER_ROLE_LABELS[member.role]}</TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {USER_ROLE_LABELS[member.role]}
+                </TableCell>
                 <TableCell>
                   <StatusBadge isActive={member.isActive} />
                 </TableCell>
@@ -75,7 +78,7 @@ export function StaffList({ staff }: { staff: StaffMember[] }) {
         </Table>
       </div>
 
-      <ul className="grid gap-3 sm:hidden">
+      <ul className="grid grid-cols-1 gap-3 sm:hidden">
         {staff.map((member) => (
           <li key={member.id}>
             <Card className="gap-3 px-4 py-4">

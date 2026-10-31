@@ -5,7 +5,8 @@ import * as React from "react";
 import { callAction } from "@/components/call-action";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { useFocusFirstError } from "@/components/use-focus-first-error";
 import type { ActionResult } from "@/lib/action-result";
 import {
   changePasswordSchema,
@@ -33,6 +34,8 @@ export function ChangePasswordForm({
   homeHref,
   forced,
 }: ChangePasswordFormProps) {
+  const formRef = React.useRef<HTMLFormElement>(null);
+
   async function submit(
     _previous: ChangePasswordState,
     formData: FormData,
@@ -49,7 +52,9 @@ export function ChangePasswordForm({
     if (result.ok) {
       // A full load, not the router: it still holds the home page's redirect to
       // S-03 from sign-in and replays it without asking the server.
-      window.location.assign(homeHref);
+      const home = new URL(homeHref, window.location.href);
+      home.searchParams.set("password", "changed");
+      window.location.assign(home);
       return { values, errors: {}, done: true };
     }
     return { values, errors: result.error.fields ?? {} };
@@ -59,18 +64,18 @@ export function ChangePasswordForm({
     values: {},
     errors: {},
   });
+  useFocusFirstError(formRef, state);
 
   return (
-    <form action={formAction} noValidate className="grid gap-4">
+    <form ref={formRef} action={formAction} noValidate className="grid gap-4">
       <Field
         label={forced ? "Password sementara" : "Password saat ini"}
         error={state.errors.currentPassword}
       >
         {(control) => (
-          <Input
+          <PasswordInput
             {...control}
             name="currentPassword"
-            type="password"
             autoComplete="current-password"
             defaultValue={state.values.currentPassword}
             required
@@ -83,10 +88,9 @@ export function ChangePasswordForm({
         error={state.errors.newPassword}
       >
         {(control) => (
-          <Input
+          <PasswordInput
             {...control}
             name="newPassword"
-            type="password"
             autoComplete="new-password"
             defaultValue={state.values.newPassword}
             required

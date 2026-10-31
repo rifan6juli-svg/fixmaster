@@ -82,46 +82,50 @@ export function BottomBar({ role }: { role: UserRole }) {
             />
           </li>
         )}
-        <li className="flex-1">
-          <Sheet>
-            <SheetTrigger
-              className={BAR_ITEM_CLASS}
-              data-active={more.some((item) => item.href === active)}
-            >
-              <Ellipsis
-                className="my-0.5 size-5"
-                strokeWidth={1.75}
-                aria-hidden="true"
-              />
-              Lainnya
-            </SheetTrigger>
-            <SheetContent>
-              <SheetTitle className="flex h-11 items-center">
+        {more.length > 0 && (
+          <li className="flex-1">
+            <Sheet>
+              <SheetTrigger
+                className={BAR_ITEM_CLASS}
+                data-active={more.some((item) => item.href === active)}
+              >
+                <Ellipsis
+                  className="my-0.5 size-5"
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                />
                 Lainnya
-              </SheetTitle>
-              <ul className="grid gap-1">
-                {more.map((item) => (
-                  <li key={item.href}>
-                    <SheetClose asChild>
-                      <Link
-                        href={item.href}
-                        aria-current={item.href === active ? "page" : undefined}
-                        className="flex h-11 items-center gap-3 rounded-md px-3 text-body font-medium text-text hover:bg-surface-sunken aria-[current=page]:bg-brand-text/12 aria-[current=page]:text-brand-text"
-                      >
-                        <item.icon
-                          className="size-5 shrink-0"
-                          strokeWidth={1.75}
-                          aria-hidden="true"
-                        />
-                        {item.label}
-                      </Link>
-                    </SheetClose>
-                  </li>
-                ))}
-              </ul>
-            </SheetContent>
-          </Sheet>
-        </li>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetTitle className="flex h-11 items-center">
+                  Lainnya
+                </SheetTitle>
+                <ul className="grid gap-1">
+                  {more.map((item) => (
+                    <li key={item.href}>
+                      <SheetClose asChild>
+                        <Link
+                          href={item.href}
+                          aria-current={
+                            item.href === active ? "page" : undefined
+                          }
+                          className="flex h-11 items-center gap-3 rounded-md px-3 text-body font-medium text-text hover:bg-surface-sunken aria-[current=page]:bg-brand-text/12 aria-[current=page]:text-brand-text"
+                        >
+                          <item.icon
+                            className="size-5 shrink-0"
+                            strokeWidth={1.75}
+                            aria-hidden="true"
+                          />
+                          {item.label}
+                        </Link>
+                      </SheetClose>
+                    </li>
+                  ))}
+                </ul>
+              </SheetContent>
+            </Sheet>
+          </li>
+        )}
       </ul>
     </nav>
   );

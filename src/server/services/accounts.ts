@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import type { UserRole } from "@/lib/user-role";
 import type { ChangePasswordInput } from "@/lib/validation/auth";
 import { getDb, type Transaction } from "@/server/db/client";
+import { violatesConstraint } from "@/server/db/errors";
 import { accounts, users } from "@/server/db/schema";
 import { AppError } from "@/server/errors";
 
@@ -43,8 +44,7 @@ export async function rejectTakenEmail<T>(insert: () => Promise<T>) {
   try {
     return await insert();
   } catch (error) {
-    const { cause } = error as { cause?: { constraint_name?: string } };
-    if (cause?.constraint_name === "users_email_unique") {
+    if (violatesConstraint(error, "users_email_unique")) {
       const message = "Email sudah terdaftar";
       throw new AppError("EMAIL_TAKEN", message, { email: message });
     }

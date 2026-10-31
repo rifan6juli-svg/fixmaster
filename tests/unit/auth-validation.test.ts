@@ -37,7 +37,7 @@ describe("registerShopSchema", () => {
   it.each([
     ["shopName", "ab", "Nama toko minimal 3 karakter"],
     ["shopName", "a".repeat(81), "Nama toko maksimal 80 karakter"],
-    ["ownerName", "   ", "Nama owner wajib diisi"],
+    ["ownerName", "   ", "Nama pemilik toko wajib diisi"],
     ["phoneWa", "12345", "Nomor WA tidak valid (contoh: 0812xxxxxxxx)"],
     ["email", "bukan-email", "Email tidak valid"],
     ["password", "1234567", "Password minimal 8 karakter"],
@@ -74,7 +74,7 @@ describe("loginSchema", () => {
   it("reports both empty fields", () => {
     const result = loginSchema.safeParse({ email: "", password: "" });
     expect(fieldErrors(result.error!)).toEqual({
-      email: "Email tidak valid",
+      email: "Email wajib diisi",
       password: "Password wajib diisi",
     });
   });

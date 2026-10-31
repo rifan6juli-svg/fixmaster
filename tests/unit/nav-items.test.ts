@@ -62,6 +62,15 @@ describe("bottomBarItemsFor", () => {
   });
 });
 
+describe("bottomBarItemsFor a technician", () => {
+  it("skips the sheet when it would hold a single item", () => {
+    const { bar, more } = bottomBarItemsFor("technician");
+
+    expect(labels(bar)).toEqual(["Dashboard", "Tiket", "Sparepart"]);
+    expect(more).toEqual([]);
+  });
+});
+
 describe("activeHref", () => {
   it.each([
     ["/dashboard", "/dashboard"],

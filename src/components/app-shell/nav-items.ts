@@ -58,10 +58,12 @@ export function receiveUnitFor(role: UserRole) {
 
 export function bottomBarItemsFor(role: UserRole) {
   const items = navItemsFor(role);
-  return {
-    bar: items.filter((item) => BOTTOM_BAR_HREFS.has(item.href)),
-    more: items.filter((item) => !BOTTOM_BAR_HREFS.has(item.href)),
-  };
+  const more = items.filter((item) => !BOTTOM_BAR_HREFS.has(item.href));
+
+  // A sheet holding one item only adds a tap: the technician's Sparepart.
+  return more.length > 1
+    ? { bar: items.filter((item) => BOTTOM_BAR_HREFS.has(item.href)), more }
+    : { bar: items, more: [] };
 }
 
 /** The most specific href for a path, so /tickets/new is not also "Tiket". */

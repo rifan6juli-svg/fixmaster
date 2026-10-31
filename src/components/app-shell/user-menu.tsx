@@ -19,15 +19,20 @@ interface UserMenuProps {
   name: string;
   email: string;
   role: UserRole;
+  shopName?: string;
 }
 
-export function UserMenu({ name, email, role }: UserMenuProps) {
+export function UserMenu({ name, email, role, shopName }: UserMenuProps) {
   const logout = useLogout();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" aria-label="Menu pengguna" className="px-2">
+        <Button
+          variant="ghost"
+          aria-label={`Menu pengguna ${name}`}
+          className="px-2"
+        >
           <CircleUser strokeWidth={1.75} aria-hidden="true" />
           <span className="hidden max-w-40 truncate sm:inline">{name}</span>
           <ChevronDown
@@ -41,7 +46,10 @@ export function UserMenu({ name, email, role }: UserMenuProps) {
         <DropdownMenuLabel>
           <p className="truncate font-semibold">{name}</p>
           <p className="truncate text-text-muted">{email}</p>
-          <p className="text-text-muted">{USER_ROLE_LABELS[role]}</p>
+          <p className="text-text-muted">
+            {USER_ROLE_LABELS[role]}
+            {shopName && ` di ${shopName}`}
+          </p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>

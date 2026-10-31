@@ -28,7 +28,9 @@ export default function SettingsPage() {
           <li key={href}>
             <Card asChild interactive className="gap-1 px-4 py-4">
               <Link href={href}>
-                <CardTitle>{title}</CardTitle>
+                <CardTitle asChild>
+                  <h2>{title}</h2>
+                </CardTitle>
                 <CardDescription>{description}</CardDescription>
               </Link>
             </Card>

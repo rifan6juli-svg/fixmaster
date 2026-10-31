@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizePhoneWa } from "@/lib/phone";
+import { formatPhoneWa, normalizePhoneWa } from "@/lib/phone";
 
 describe("normalizePhoneWa", () => {
   it.each([
@@ -20,4 +20,20 @@ describe("normalizePhoneWa", () => {
       expect(normalizePhoneWa(input)).toBeNull();
     },
   );
+});
+
+describe("formatPhoneWa", () => {
+  it.each([
+    ["6281234567890", "0812 3456 7890"],
+    ["62812345678", "0812 3456 78"],
+    ["62215551234", "0215 5512 34"],
+  ])("formats %s", (phone, expected) => {
+    expect(formatPhoneWa(phone)).toBe(expected);
+  });
+
+  it("gives back a number normalizePhoneWa accepts", () => {
+    expect(normalizePhoneWa(formatPhoneWa("6281234567890"))).toBe(
+      "6281234567890",
+    );
+  });
 });

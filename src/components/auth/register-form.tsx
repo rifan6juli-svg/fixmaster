@@ -6,6 +6,8 @@ import { callAction } from "@/components/call-action";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { useFocusFirstError } from "@/components/use-focus-first-error";
 import type { ActionResult } from "@/lib/action-result";
 import {
   fieldErrors,
@@ -47,12 +49,7 @@ export function RegisterForm({ action }: RegisterFormProps) {
     errors: {},
   });
 
-  // On a phone the first error can be off-screen once the form is submitted.
-  React.useEffect(() => {
-    formRef.current
-      ?.querySelector<HTMLElement>('[aria-invalid="true"]')
-      ?.focus();
-  }, [state]);
+  useFocusFirstError(formRef, state);
 
   return (
     <form ref={formRef} action={formAction} noValidate className="grid gap-4">
@@ -67,7 +64,7 @@ export function RegisterForm({ action }: RegisterFormProps) {
           />
         )}
       </Field>
-      <Field label="Nama owner" error={state.errors.ownerName}>
+      <Field label="Nama pemilik toko" error={state.errors.ownerName}>
         {(control) => (
           <Input
             {...control}
@@ -112,10 +109,9 @@ export function RegisterForm({ action }: RegisterFormProps) {
         error={state.errors.password}
       >
         {(control) => (
-          <Input
+          <PasswordInput
             {...control}
             name="password"
-            type="password"
             autoComplete="new-password"
             defaultValue={state.values.password}
             required

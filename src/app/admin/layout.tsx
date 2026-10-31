@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { AppHeader } from "@/components/app-shell/app-header";
 import { AppShellSkeleton } from "@/components/app-shell/skeletons";
+import { UrlToast } from "@/components/app-shell/url-toast";
 import { UserMenu } from "@/components/app-shell/user-menu";
 import { SessionRefresher } from "@/components/auth/session-refresher";
 import { requireSuperAdmin } from "@/server/auth/context";
@@ -12,6 +13,9 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <SessionRefresher />
+      <Suspense fallback={null}>
+        <UrlToast />
+      </Suspense>
       <AppHeader homeHref="/admin">
         <UserMenu name={name} email={email} role={role} />
       </AppHeader>

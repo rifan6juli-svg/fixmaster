@@ -11,6 +11,9 @@ export default defineConfig({
   // Parallel Chromium saturates a 4-thread laptop until the server stalls for
   // 20s or more, which fails login tests at random (docs/IPD.md, step 4).
   workers: 1,
+  // Registering a shop hashes a password, signs in, and renders the dashboard,
+  // which has taken over 5s here. Anything stuck still fails at this limit.
+  expect: { timeout: 10_000 },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   use: {

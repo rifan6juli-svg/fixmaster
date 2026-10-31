@@ -15,10 +15,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
+import { useFocusFirstError } from "@/components/use-focus-first-error";
 import type { ActionResult } from "@/lib/action-result";
 import { fieldErrors } from "@/lib/validation/auth";
 import { resetStaffPasswordSchema } from "@/lib/validation/staff";
 import { TempPasswordField } from "./temp-password-field";
+import { TempPasswordHandoff } from "./temp-password-handoff";
 
 type SetStaffActive = (input: {
   userId: string;
@@ -33,6 +35,7 @@ type ResetStaffPassword = (input: {
 interface StaffIdentity {
   userId: string;
   name: string;
+  email: string;
 }
 
 interface ResetPasswordState {
@@ -43,12 +46,14 @@ interface ResetPasswordState {
 function ResetPasswordForm({
   staff,
   action,
-  onDone,
+  onReset,
 }: {
   staff: StaffIdentity;
   action: ResetStaffPassword;
-  onDone: () => void;
+  onReset: (tempPassword: string) => void;
 }) {
+  const formRef = React.useRef<HTMLFormElement>(null);
+
   async function submit(
     _previous: ResetPasswordState,
     formData: FormData,
@@ -62,17 +67,17 @@ function ResetPasswordForm({
 
     const result = await callAction(() => action(input));
     if (result.ok) {
-      toast.success(`Password ${staff.name} direset`);
-      onDone();
+      onReset(tempPassword);
       return { tempPassword };
     }
     return { tempPassword, error: result.error.fields?.tempPassword };
   }
 
   const [state, formAction, pending] = React.useActionState(submit, {});
+  useFocusFirstError(formRef, state);
 
   return (
-    <form action={formAction} noValidate className="grid gap-4">
+    <form ref={formRef} action={formAction} noValidate className="grid gap-4">
       <TempPasswordField
         defaultValue={state.tempPassword}
         error={state.error}
@@ -84,7 +89,7 @@ function ResetPasswordForm({
           </Button>
         </DialogClose>
         <Button type="submit" loading={pending}>
-          Simpan
+          Reset password
         </Button>
       </DialogFooter>
     </form>
@@ -99,26 +104,51 @@ function ResetPasswordDialog({
   action: ResetStaffPassword;
 }) {
   const [open, setOpen] = React.useState(false);
+  const [newPassword, setNewPassword] = React.useState<string | null>(null);
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) {
+      setNewPassword(null);
+    }
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="secondary" aria-label={`Reset password ${staff.name}`}>
           Reset password
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent
+        // A stray tap must not lose the only view of the new password.
+        onInteractOutside={(event) => event.preventDefault()}
+      >
         <DialogHeader>
-          <DialogTitle>Reset password {staff.name}</DialogTitle>
+          <DialogTitle>
+            {newPassword
+              ? `Password ${staff.name} direset`
+              : `Reset password ${staff.name}`}
+          </DialogTitle>
           <DialogDescription>
-            Password lama langsung tidak berlaku dan sesi yang terbuka dicabut.
+            {newPassword
+              ? "Akun ini sudah keluar dari semua perangkat."
+              : "Password lama langsung tidak berlaku dan akun ini keluar dari semua perangkat."}
           </DialogDescription>
         </DialogHeader>
-        <ResetPasswordForm
-          staff={staff}
-          action={action}
-          onDone={() => setOpen(false)}
-        />
+        {newPassword ? (
+          <TempPasswordHandoff
+            email={staff.email}
+            password={newPassword}
+            onDone={() => handleOpenChange(false)}
+          />
+        ) : (
+          <ResetPasswordForm
+            staff={staff}
+            action={action}
+            onReset={setNewPassword}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -161,8 +191,8 @@ function DeactivateDialog({
         <DialogHeader>
           <DialogTitle>Nonaktifkan {staff.name}?</DialogTitle>
           <DialogDescription>
-            Semua sesinya langsung dicabut dan akun ini tidak bisa login sampai
-            diaktifkan lagi.
+            Akun ini langsung keluar dari semua perangkat dan tidak bisa login
+            sampai diaktifkan lagi. Tiket dan riwayatnya tetap tersimpan.
           </DialogDescription>
         </DialogHeader>
         <form action={formAction}>
@@ -224,14 +254,15 @@ interface StaffActionsProps extends StaffIdentity {
 export function StaffActions({
   userId,
   name,
+  email,
   isActive,
   setActive,
   resetPassword,
 }: StaffActionsProps) {
-  const staff = { userId, name };
+  const staff = { userId, name, email };
 
   return (
-    <div className="flex flex-wrap gap-2 sm:justify-end">
+    <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:justify-end">
       <ResetPasswordDialog staff={staff} action={resetPassword} />
       {isActive ? (
         <DeactivateDialog staff={staff} action={setActive} />

@@ -6,7 +6,9 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { toastError } from "@/components/ui/sonner";
+import { useFocusFirstError } from "@/components/use-focus-first-error";
 import { authClient } from "@/lib/auth-client";
 import { safeNextPath } from "@/lib/safe-next";
 import { fieldErrors, loginSchema } from "@/lib/validation/auth";
@@ -29,6 +31,7 @@ interface LoginState {
 
 export function LoginForm() {
   const router = useRouter();
+  const formRef = React.useRef<HTMLFormElement>(null);
 
   async function submit(
     _previous: LoginState,
@@ -67,9 +70,10 @@ export function LoginForm() {
     values: {},
     errors: {},
   });
+  useFocusFirstError(formRef, state);
 
   return (
-    <form action={formAction} noValidate className="grid gap-4">
+    <form ref={formRef} action={formAction} noValidate className="grid gap-4">
       {state.banner && (
         <p
           role="alert"
@@ -92,10 +96,9 @@ export function LoginForm() {
       </Field>
       <Field label="Password" error={state.errors.password}>
         {(control) => (
-          <Input
+          <PasswordInput
             {...control}
             name="password"
-            type="password"
             autoComplete="current-password"
             defaultValue={state.values.password}
             required

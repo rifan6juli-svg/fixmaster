@@ -16,15 +16,17 @@ import {
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { toast } from "@/components/ui/sonner";
+import { useFocusFirstError } from "@/components/use-focus-first-error";
 import type { ActionResult } from "@/lib/action-result";
 import { USER_ROLE_LABELS } from "@/lib/user-role";
 import { fieldErrors } from "@/lib/validation/auth";
 import {
   createStaffSchema,
   type CreateStaffForm,
+  type CreateStaffInput,
 } from "@/lib/validation/staff";
 import { TempPasswordField } from "./temp-password-field";
+import { TempPasswordHandoff } from "./temp-password-handoff";
 
 type CreateStaffAction = (
   input: CreateStaffForm,
@@ -37,11 +39,13 @@ interface AddStaffState {
 
 function AddStaffForm({
   action,
-  onDone,
+  onCreated,
 }: {
   action: CreateStaffAction;
-  onDone: () => void;
+  onCreated: (staff: CreateStaffInput) => void;
 }) {
+  const formRef = React.useRef<HTMLFormElement>(null);
+
   async function submit(
     _previous: AddStaffState,
     formData: FormData,
@@ -54,8 +58,7 @@ function AddStaffForm({
 
     const result = await callAction(() => action(values));
     if (result.ok) {
-      toast.success(`Akun ${parsed.data.name} dibuat`);
-      onDone();
+      onCreated(parsed.data);
       return { values, errors: {} };
     }
     return { values, errors: result.error.fields ?? {} };
@@ -65,9 +68,10 @@ function AddStaffForm({
     values: {},
     errors: {},
   });
+  useFocusFirstError(formRef, state);
 
   return (
-    <form action={formAction} noValidate className="grid gap-4">
+    <form ref={formRef} action={formAction} noValidate className="grid gap-4">
       <Field label="Nama" error={state.errors.name}>
         {(control) => (
           <Input
@@ -91,7 +95,11 @@ function AddStaffForm({
           />
         )}
       </Field>
-      <Field label="Peran" error={state.errors.role}>
+      <Field
+        label="Peran"
+        hint="Admin/Kasir melayani pelanggan dan pembayaran. Teknisi mengerjakan tiket yang ditugaskan."
+        error={state.errors.role}
+      >
         {(control) => (
           <Select
             {...control}
@@ -114,7 +122,7 @@ function AddStaffForm({
           </Button>
         </DialogClose>
         <Button type="submit" loading={pending}>
-          Simpan
+          Buat akun
         </Button>
       </DialogFooter>
     </form>
@@ -123,17 +131,39 @@ function AddStaffForm({
 
 export function AddStaffDialog({ action }: { action: CreateStaffAction }) {
   const [open, setOpen] = React.useState(false);
+  const [created, setCreated] = React.useState<CreateStaffInput | null>(null);
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) {
+      setCreated(null);
+    }
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>Tambah staf</Button>
       </DialogTrigger>
-      <DialogContent aria-describedby={undefined}>
+      <DialogContent
+        aria-describedby={undefined}
+        // A stray tap must not lose a typed form or the only view of the password.
+        onInteractOutside={(event) => event.preventDefault()}
+      >
         <DialogHeader>
-          <DialogTitle>Tambah staf</DialogTitle>
+          <DialogTitle>
+            {created ? `Akun ${created.name} dibuat` : "Tambah staf"}
+          </DialogTitle>
         </DialogHeader>
-        <AddStaffForm action={action} onDone={() => setOpen(false)} />
+        {created ? (
+          <TempPasswordHandoff
+            email={created.email}
+            password={created.tempPassword}
+            onDone={() => handleOpenChange(false)}
+          />
+        ) : (
+          <AddStaffForm action={action} onCreated={setCreated} />
+        )}
       </DialogContent>
     </Dialog>
   );

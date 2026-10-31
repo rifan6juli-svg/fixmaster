@@ -1,6 +1,6 @@
 # AFD - Fixmaster
 
-> Versi: 0.4 | Diperbarui: 2026-10-31 | Merujuk: PRD.md (ID fitur F-xx)
+> Versi: 0.5 | Diperbarui: 2026-10-31 | Merujuk: PRD.md (ID fitur F-xx)
 
 ## 1. Peta Layar
 | ID | Layar | Rute/URL | Akses | Fitur terkait |
@@ -65,15 +65,16 @@ flowchart TD
 - > 5 percobaan/menit/IP -> "Terlalu banyak percobaan, coba lagi dalam 1 menit".
 - Koneksi putus -> toast "Koneksi terputus, coba lagi"; isian form tetap.
 - Sesi habis (halaman mana pun) -> redirect `/login?next={path}`.
+- Lupa password -> S-02 menjelaskan: staf meminta pemilik toko meresetnya, pemilik toko menghubungi admin Fixmaster [ASUMSI A-17]. Kontak admin mengikuti pertanyaan terbuka PRD bagian 9.
 
 ### F-02 Staf & peran
 **Pemicu:** owner membuka S-15.
 **Alur utama:**
 1. Owner menekan "Tambah staf", mengisi nama, email, peran, password sementara.
-2. Sistem membuat akun dengan `must_change_password = true`; staf muncul di daftar.
+2. Sistem membuat akun dengan `must_change_password = true`; staf muncul di daftar. Dialog tetap terbuka dan menampilkan email + password sementara dengan tombol "Salin", karena password tidak bisa dilihat lagi setelah dialog ditutup. Sentuhan di luar dialog tidak menutupnya.
 3. Staf login -> S-03 -> wajib membuat password baru (min 8, beda dari sementara) -> S-04.
 
-Aksi lain: "Nonaktifkan" (dialog konfirmasi, sesi staf dicabut), "Aktifkan", "Reset password" (dialog password sementara baru; sesi staf dicabut dan staf wajib lewat S-03 lagi). S-15 dibuka dari S-16. Semua user bisa membuka S-03 sendiri lewat menu pengguna ("Ganti password"); user yang wajib mengganti password hanya punya tombol "Keluar" sebagai jalan lain.
+Aksi lain: "Nonaktifkan" (dialog konfirmasi, sesi staf dicabut), "Aktifkan", "Reset password" (dialog password sementara baru, lalu penyerahan yang sama; sesi staf dicabut dan staf wajib lewat S-03 lagi). S-15 dibuka dari S-16. Semua user bisa membuka S-03 sendiri lewat menu pengguna ("Ganti password"); user yang wajib mengganti password hanya punya tombol "Keluar" sebagai jalan lain.
 
 **Alur alternatif / gagal:**
 - Email sudah dipakai -> pesan di field email.
@@ -111,6 +112,8 @@ flowchart TD
   G -- Ya --> I[Simpan: nomor tiket + token + DP]
   I --> J[S-07: Cetak tanda terima / Kirim WA]
 ```
+
+S-11 dibuka dalam mode baca (nomor WA sebagai tautan `wa.me`, catatan, riwayat tiket); "Ubah" membuka form, "Batal" kembali tanpa menyimpan. Tautan kembali S-11 menjaga pencarian dan halaman S-10.
 
 ### F-04 Pengerjaan & status servis
 **Pemicu:** staf membuka S-05 / S-07.

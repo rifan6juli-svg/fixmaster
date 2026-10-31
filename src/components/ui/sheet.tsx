@@ -38,7 +38,7 @@ function SheetContent({
         data-slot="sheet-content"
         aria-describedby={undefined}
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 grid gap-2 rounded-t-lg border-t border-border bg-surface-raised p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-text shadow-raised duration-200 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom",
+          "fixed inset-x-0 bottom-0 z-50 grid max-h-[calc(100dvh-2rem)] gap-2 overflow-y-auto rounded-t-lg border-t border-border bg-surface-raised p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-text shadow-raised duration-200 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom",
           className,
         )}
         {...props}

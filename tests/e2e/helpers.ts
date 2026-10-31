@@ -19,8 +19,22 @@ export async function fillLoginForm(
   password: string,
 ) {
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Masuk" }).click();
+}
+
+export function toast(page: Page, text: string) {
+  return page.getByRole("region", { name: /Notifikasi/ }).getByText(text);
+}
+
+/**
+ * Checks a toast and closes it. On a phone it covers the bottom of the list, and
+ * its timer stops while the test's mouse rests on it, so a later click would hang.
+ */
+export async function expectToast(page: Page, text: string) {
+  await expect(toast(page, text)).toBeVisible();
+  await page.getByRole("button", { name: "Tutup notifikasi" }).first().click();
+  await expect(toast(page, text)).toHaveCount(0);
 }
 
 export async function signIn(page: Page, email: string, password = PASSWORD) {

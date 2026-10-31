@@ -36,7 +36,10 @@ export default function RegisterPage() {
       <CardFooter className="text-body-sm text-text-muted">
         <p>
           Sudah punya akun?{" "}
-          <Link href="/login" className="text-brand-text underline">
+          <Link
+            href="/login"
+            className="inline-flex min-h-11 items-center text-brand-text underline"
+          >
             Masuk
           </Link>
         </p>

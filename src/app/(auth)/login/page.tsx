@@ -28,10 +28,17 @@ export default function LoginPage() {
       <CardContent>
         <LoginForm />
       </CardContent>
-      <CardFooter className="text-body-sm text-text-muted">
+      <CardFooter className="flex-col items-start gap-2 text-body-sm text-text-muted">
+        <p>
+          Lupa password? Staf meminta pemilik toko meresetnya. Pemilik toko
+          menghubungi admin Fixmaster.
+        </p>
         <p>
           Belum punya akun?{" "}
-          <Link href="/register" className="text-brand-text underline">
+          <Link
+            href="/register"
+            className="inline-flex min-h-11 items-center text-brand-text underline"
+          >
             Daftarkan toko
           </Link>
         </p>

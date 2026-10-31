@@ -8,7 +8,7 @@ export function LogoutButton() {
   const logout = useLogout();
 
   return (
-    <Button variant="ghost" onClick={logout}>
+    <Button variant="ghost" className="-ml-4" onClick={logout}>
       Keluar
     </Button>
   );

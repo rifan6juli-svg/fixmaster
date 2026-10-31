@@ -40,7 +40,10 @@ async function ChangePasswordContent() {
         {forced ? (
           <LogoutButton />
         ) : (
-          <Link href={homePath(user)} className="text-brand-text underline">
+          <Link
+            href={homePath(user)}
+            className="inline-flex min-h-11 items-center text-brand-text underline"
+          >
             Kembali
           </Link>
         )}

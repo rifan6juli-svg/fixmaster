@@ -6,8 +6,20 @@ export const emailField = z
   .string()
   .trim()
   .toLowerCase()
+  .min(1, "Email wajib diisi")
   .max(255, "Email maksimal 255 karakter")
   .pipe(z.email("Email tidak valid"));
+
+/** A WhatsApp number in any common format, stored as 62xxxxxxxxx. */
+export const phoneWaField = z
+  .string()
+  .trim()
+  .min(1, "Nomor WA wajib diisi")
+  .refine(
+    (value) => normalizePhoneWa(value) !== null,
+    "Nomor WA tidak valid (contoh: 0812xxxxxxxx)",
+  )
+  .transform((value) => normalizePhoneWa(value)!);
 
 /** A password being set, within the limits Better Auth accepts at sign-in. */
 export function newPasswordField(label = "Password") {
@@ -26,15 +38,9 @@ export const registerShopSchema = z.object({
   ownerName: z
     .string()
     .trim()
-    .min(1, "Nama owner wajib diisi")
-    .max(100, "Nama owner maksimal 100 karakter"),
-  phoneWa: z
-    .string()
-    .refine(
-      (value) => normalizePhoneWa(value) !== null,
-      "Nomor WA tidak valid (contoh: 0812xxxxxxxx)",
-    )
-    .transform((value) => normalizePhoneWa(value)!),
+    .min(1, "Nama pemilik toko wajib diisi")
+    .max(100, "Nama pemilik toko maksimal 100 karakter"),
+  phoneWa: phoneWaField,
   email: emailField,
   password: newPasswordField(),
 });

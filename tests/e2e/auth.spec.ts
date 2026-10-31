@@ -7,10 +7,10 @@ test.beforeEach(async ({ page }) => {
 
 async function fillRegisterForm(page: Page, email: string) {
   await page.getByLabel("Nama toko").fill("Toko Uji Coba");
-  await page.getByLabel("Nama owner").fill("Pemilik Uji");
+  await page.getByLabel("Nama pemilik toko").fill("Pemilik Uji");
   await page.getByLabel("Nomor WA toko").fill("0812-3456-7890");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("rahasia-123");
+  await page.getByLabel("Password", { exact: true }).fill("rahasia-123");
 }
 
 test.describe("registration", () => {
@@ -54,11 +54,9 @@ test.describe("registration", () => {
     await page.getByRole("button", { name: "Daftar & mulai trial" }).click();
 
     await expect(page.getByText("Nama toko minimal 3 karakter")).toBeVisible();
-    await expect(page.getByText("Nama owner wajib diisi")).toBeVisible();
-    await expect(
-      page.getByText("Nomor WA tidak valid (contoh: 0812xxxxxxxx)"),
-    ).toBeVisible();
-    await expect(page.getByText("Email tidak valid")).toBeVisible();
+    await expect(page.getByText("Nama pemilik toko wajib diisi")).toBeVisible();
+    await expect(page.getByText("Nomor WA wajib diisi")).toBeVisible();
+    await expect(page.getByText("Email wajib diisi")).toBeVisible();
     await expect(page.getByText("Password minimal 8 karakter")).toBeVisible();
     await expect(page.getByLabel("Nama toko")).toBeFocused();
   });

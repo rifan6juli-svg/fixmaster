@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import postgres from "postgres";
 import { e2eDatabaseUrl } from "../helpers/test-db";
-import { signIn, assignOwnIp } from "./helpers";
+import { assignOwnIp, signIn, toast } from "./helpers";
 
 const OWNER = "owner@demo.test";
 const ADMIN = "admin@demo.test";
@@ -34,17 +34,13 @@ const MENUS = [
   {
     email: TECHNICIAN,
     menu: ["Dashboard", "Tiket", "Sparepart"],
-    bottomBar: ["Dashboard", "Tiket"],
-    sheet: ["Sparepart"],
+    bottomBar: ["Dashboard", "Tiket", "Sparepart"],
+    sheet: [],
   },
 ];
 
 function mainNav(page: Page) {
   return page.getByRole("navigation", { name: "Navigasi utama" });
-}
-
-function toast(page: Page, text: string) {
-  return page.getByRole("region", { name: /Notifikasi/ }).getByText(text);
 }
 
 async function expectNoHorizontalScroll(page: Page) {
@@ -76,6 +72,12 @@ test.describe("menu per role", () => {
       }
 
       await expect(mainNav(page).getByRole("link")).toHaveText(bottomBar);
+      if (sheet.length === 0) {
+        await expect(
+          mainNav(page).getByRole("button", { name: "Lainnya" }),
+        ).toHaveCount(0);
+        return;
+      }
       await mainNav(page).getByRole("button", { name: "Lainnya" }).click();
       await expect(
         page.getByRole("dialog", { name: "Lainnya" }).getByRole("link"),
@@ -90,7 +92,8 @@ test.describe("menu per role", () => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await signIn(page, OWNER);
 
-    await expect(page.getByRole("complementary")).toHaveCSS("width", "64px");
+    await expect(page.getByRole("complementary")).toHaveCSS("width", "88px");
+    await expect(mainNav(page).getByText("Pengaturan")).toBeVisible();
     await expect(
       mainNav(page).getByRole("link", { name: "Tiket" }),
     ).toBeVisible();
@@ -228,6 +231,28 @@ test.describe("super-admin", () => {
 });
 
 test.describe("dashboard", () => {
+  test("shows the owner the trial days and the shop's name", async ({
+    page,
+  }, testInfo) => {
+    await signIn(page, OWNER);
+
+    await expect(page.locator('[data-slot="readout"]')).toHaveText(
+      /^Trial \d+ hari$/,
+    );
+    if (testInfo.project.name === "desktop") {
+      await expect(page.getByRole("banner")).toContainText("Toko Demo Servis");
+    }
+  });
+
+  test("hides the trial days from a technician", async ({ page }) => {
+    await signIn(page, TECHNICIAN);
+
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Dashboard" }),
+    ).toBeVisible();
+    await expect(page.locator('[data-slot="readout"]')).toHaveCount(0);
+  });
+
   test("skips the first-time state once the shop has tickets", async ({
     page,
   }) => {
@@ -279,11 +304,28 @@ test.describe("error pages", () => {
 });
 
 test.describe("layout", () => {
+  test("starts the tab order with a skip link", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "needs a keyboard");
+    await signIn(page, OWNER);
+    await page.reload();
+
+    await page.keyboard.press("Tab");
+
+    await expect(
+      page.getByRole("link", { name: "Lewati ke konten" }),
+    ).toBeFocused();
+  });
+
   test("has no horizontal scroll", async ({ page }) => {
     await signIn(page, OWNER);
     await expectNoHorizontalScroll(page);
 
-    for (const path of ["/tickets", "/reports", "/settings/staff"]) {
+    for (const path of [
+      "/tickets",
+      "/reports",
+      "/settings/staff",
+      "/customers",
+    ]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await expectNoHorizontalScroll(page);
