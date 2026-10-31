@@ -26,8 +26,7 @@ function Field({ label, hint, error, className, children }: FieldProps) {
   const id = React.useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
-  const describedBy =
-    [hint && hintId, error && errorId].filter(Boolean).join(" ") || undefined;
+  const describedBy = (error ? errorId : hint && hintId) || undefined;
 
   return (
     <div data-slot="field" className={cn("grid gap-2", className)}>
@@ -37,7 +36,7 @@ function Field({ label, hint, error, className, children }: FieldProps) {
         "aria-describedby": describedBy,
         "aria-invalid": error ? true : undefined,
       })}
-      {hint && (
+      {hint && !error && (
         <p id={hintId} className="text-body-sm text-text-muted">
           {hint}
         </p>

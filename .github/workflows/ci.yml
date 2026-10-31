@@ -17,5 +17,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.114.0
+      - run: supabase db start
       - run: pnpm test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          BETTER_AUTH_URL: http://localhost:3000
       - run: pnpm build

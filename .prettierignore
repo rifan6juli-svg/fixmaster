@@ -9,3 +9,5 @@ AGENTS.md
 pnpm-lock.yaml
 drizzle/
 next-env.d.ts
+supabase/.temp/
+.impeccable/critique/

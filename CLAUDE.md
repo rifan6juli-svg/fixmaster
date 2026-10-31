@@ -29,7 +29,7 @@ Baca sebelum bekerja. Jangan menebak jika dokumen tidak menjelaskan; tanyakan.
 - Test: `pnpm test` (unit + integrasi), `pnpm test:e2e` (Playwright)
 - Lint: `pnpm lint` | Cek tipe: `pnpm typecheck` | Format: `pnpm format`
 - Build: `pnpm build`
-- Database: `pnpm db:generate`, `pnpm db:migrate`, `pnpm db:seed`, `pnpm db:reset` (hentikan `pnpm dev` dulu: PGlite hanya bisa dibuka satu proses)
+- Database (Supabase lokal, nyalakan Docker Desktop dulu): `pnpm db:start`, `pnpm db:stop`, `pnpm db:generate`, `pnpm db:migrate`, `pnpm db:seed`, `pnpm db:reset`
 - Super-admin: `pnpm admin:create`
 
 (Perintah di atas dibuat di IPD langkah 1, 3, 4, dan 22.)
@@ -37,6 +37,7 @@ Baca sebelum bekerja. Jangan menebak jika dokumen tidak menjelaskan; tanyakan.
 ## Aturan Keras
 - Jangan commit secret; gunakan environment variable (`.env.example` sebagai daftar).
 - Jangan hapus atau timpa data/migrasi yang sudah ada tanpa konfirmasi; file di `drizzle/` tidak diubah setelah di-commit.
+- Tes, seed, dan `db:reset` hanya boleh berjalan terhadap Postgres lokal; semua tabel `public` wajib ber-RLS (TRD bagian 5).
 - Setiap akses data lewat `src/server/services/` dengan `TenantContext`; `tenant_id` tidak pernah dari input klien; setiap service baru punya tes isolasi dua tenant.
 - Nilai kunci layar perangkat hanya dienkripsi/didekripsi di `src/server/crypto/` dan tidak pernah dicatat di log atau dikirim ke klien selain lewat `revealLockSecret`.
 - Uang = integer Rupiah (`bigint`); waktu = `timestamptz` UTC, ditampilkan dengan zona waktu toko.

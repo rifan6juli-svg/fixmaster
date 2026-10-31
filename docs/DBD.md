@@ -1,6 +1,6 @@
 # DBD - Fixmaster
 
-> Versi: 0.5 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, AFD.md
+> Versi: 0.6 | Diperbarui: 2026-10-31 | Merujuk: PRD.md, AFD.md
 > Sumber visual: file di `brand/` (logo, ikon, maskot VOLT Probe). Semua warna di bawah diturunkan dari file tersebut.
 
 ## 1. Karakter Brand
@@ -86,12 +86,12 @@ Badge punya dua sumbu: warna (`tone`) dan bentuk (`fill`). `tint` = latar token 
 | Komponen | Varian | State wajib | Dipakai di |
 |---|---|---|---|
 | Button | primary, secondary, ghost, danger; ukuran md (44px, memenuhi target sentuh) & lg (48px) | default, hover, focus, disabled, loading | semua layar |
-| Input | text, password, tel (nomor WA), money (`MoneyInput`: prefix "Rp", pemisah ribuan, rata kanan, mengirim integer Rupiah), textarea, select, date; tinggi 44px; dibungkus `Field` (label + hint + error, `aria-describedby` otomatis); contoh format ditulis sebagai hint, bukan placeholder; nilai yang hanya dibaca memakai `readOnly` | default, focus, error, disabled | S-01-S-03, S-06, S-07, S-11, S-13, S-15-S-17, S-20 |
+| Input | text, password (`PasswordInput`, dengan tombol tampilkan/sembunyikan karena tidak ada reset lewat email), tel (nomor WA), money (`MoneyInput`: prefix "Rp", pemisah ribuan, rata kanan, mengirim integer Rupiah), textarea, select, date; tinggi 44px; dibungkus `Field` (label + hint + error, `aria-describedby` otomatis); contoh format ditulis sebagai hint, bukan placeholder; nilai yang hanya dibaca memakai `readOnly` | default, focus, error, disabled | S-01-S-03, S-06, S-07, S-11, S-13, S-15-S-17, S-20 |
 | Combobox | cari pelanggan, cari part (menampilkan sisa stok) | loading, kosong, hasil, error | S-06, S-07 |
 | Checkbox group | kelengkapan unit, setuju syarat servis | checked, focus, disabled | S-06 |
 | Switch | pengaturan on/off (wajib tanda tangan, teknisi ambil tiket) | on, off, focus, disabled | S-16 |
 | Badge | status tiket (8), stok menipis, status langganan | - | S-04, S-05, S-07, S-11, S-12, S-18, S-19 |
-| Readout | nomor tiket, total/sisa bayar (font mono, readout-bg, chamfer + bingkai `--volt-edge`) | - | S-07, S-18 |
+| Readout | nomor tiket, total/sisa bayar, dan satu angka ringkas per layar yang dibaca sekilas: sisa trial (S-04, owner), jumlah data (S-10, S-15), password sementara saat diserahkan (S-15). Font mono, readout-bg, chamfer + bingkai `--volt-edge`, huruf kapital untuk label angka | - | S-04, S-07, S-10, S-15, S-18 |
 | Card | kartu angka (`interactive` + `asChild` ke link, hover: border-strong + bayangan), kartu tiket mobile, section detail; `CardTitle` berupa heading (`h3`) | default, hover, focus | S-04, S-05, S-07, S-13, S-17, S-20 |
 | Table | menjadi daftar kartu di < 640px | loading (skeleton), kosong | S-05, S-10-S-15, S-19, S-20 |
 | Tabs | owner/admin: "Semua" / "Belum ditugaskan"; teknisi: "Tiket saya" / "Belum ditugaskan" (jika klaim aktif) | aktif, focus | S-05 |
@@ -102,8 +102,8 @@ Badge punya dua sumbu: warna (`tone`) dan bentuk (`fill`). `tint` = latar token 
 | Toast / Banner | toast sukses (tint `success`), error (tint `danger`, tetap tampil sampai ditutup, boleh punya tombol aksi pemulihan), info; tombol tutup dengan area klik 44px dan label Indonesia; pesan error diumumkan lewat region `role="alert"` (assertive); di mobile toast berada di atas bottom bar (`--fm-bottom-bar-height`); banner langganan & peringatan estimasi | auto-hilang 4 detik (sukses) | semua layar `(app)`, S-07 |
 | SignaturePad | area min 300x150px di surface-sunken + tombol "Ulangi" | kosong, terisi, error | S-06 |
 | Timeline | semua event (S-07), event publik (S-18) | - | S-07, S-18, S-20 (log) |
-| Navigasi | sidebar (>= 1024px), rail ikon 64px (640-1023px), bottom bar + sheet "Lainnya" (< 640px) | aktif, hover, focus | semua layar `(app)` dan `admin/` |
-| EmptyState | panel chamfer 12px di atas `surface` dengan bingkai `border-strong`; dengan maskot `full` 120px atau tanpa maskot | - | S-04, S-05, S-10, S-12, S-14, S-15, S-18 (kedaluwarsa), 404/error |
+| Navigasi | sidebar (>= 1024px), rail 88px ikon + label caption (640-1023px, tablet tidak punya hover untuk `title`), bottom bar + sheet "Lainnya" (< 640px; sheet tidak dipakai bila hanya berisi satu item). "Terima unit" di sidebar/rail memakai tile ikon amber seperti bottom bar, sehingga tombol primary tetap milik area aksi halaman | aktif, hover, focus | semua layar `(app)` dan `admin/` |
+| EmptyState | panel chamfer 12px di atas `surface` dengan bingkai `border-strong`; dengan maskot `full` 120px atau tanpa maskot; varian `hero` (judul display 32/40, maskot 160px, lebar maks 672px) saat panel adalah seluruh pesan layar: S-04 pertama kali | - | S-04, S-05, S-10, S-12, S-14, S-15, S-18 (kedaluwarsa), 404/error |
 | Skeleton | baris tabel, kartu, form; kontainer diberi `aria-busy="true"` + teks `sr-only` "Memuat data…" | - | semua layar dengan data |
 | Halaman cetak | `thermal_58` (lebar cetak 48mm), `thermal_80` (72mm), `a4` | selalu mode terang, teks hitam, tanpa latar berwarna | S-08, S-09 |
 
@@ -111,7 +111,7 @@ Badge punya dua sumbu: warna (`tone`) dan bentuk (`fill`). `tint` = latar token 
 | Breakpoint | Lebar | Perilaku layout |
 |---|---|---|
 | mobile | < 640px | 1 kolom; tabel jadi kartu; bottom bar; aksi utama S-07 menempel di bawah layar; form 1 kolom |
-| tablet | 640-1023px | rail ikon 64px; form 2 kolom; tabel hanya kolom prioritas (nomor, pelanggan, status, aksi) |
+| tablet | 640-1023px | rail 88px; form 2 kolom; tabel hanya kolom prioritas (nomor, pelanggan, status, aksi) |
 | desktop | >= 1024px | sidebar 240px; S-07 dua kolom (kiri: unit & item; kanan: status, pembayaran, timeline) |
 
 Pendekatan: mobile-first. S-06 dioptimalkan untuk tablet di meja kasir (pad tanda tangan lebar penuh).
@@ -145,7 +145,7 @@ Pendekatan: mobile-first. S-06 dioptimalkan untuk tablet di meja kasir (pad tand
 |---|---|
 | Amber sebagai latar tombol utama dengan teks grafit gelap | Teks putih di atas amber, atau teks amber di latar terang |
 | Satu tombol primary per area aksi | Beberapa tombol amber bersaing dalam satu layar |
-| Readout LCD (mono, cyan di atas hitam) untuk nomor tiket dan total | Readout untuk teks biasa atau dekorasi |
+| Readout LCD (mono, cyan di atas hitam) untuk nomor tiket, total, dan satu angka ringkas per layar | Readout untuk kalimat, dekorasi, atau lebih dari satu angka ringkas di satu layar |
 | Chamfer pada readout, header S-18, panel kosong | Chamfer di semua kartu dan tombol |
 | Maskot sebagai teman bengkel di state kosong/error | Maskot sebagai avatar chatbot atau di layar padat data |
 | Label status + ikon + warna | Membedakan status hanya dengan warna |
