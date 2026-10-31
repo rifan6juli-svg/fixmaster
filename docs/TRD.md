@@ -1,6 +1,6 @@
 # TRD - Fixmaster
 
-> Versi: 0.5 | Diperbarui: 2026-10-30 | Merujuk: PRD.md
+> Versi: 0.6 | Diperbarui: 2026-10-31 | Merujuk: PRD.md
 
 ## 1. Tech Stack
 | Lapisan | Pilihan | Alasan (1 kalimat) |
@@ -52,7 +52,7 @@ brand/                    # aset brand asli (sumber kebenaran, jangan diedit tan
 docs/                     # PRD, TRD, AFD, DBD, BSD, IPD
 drizzle/                  # file migrasi SQL hasil drizzle-kit (di-commit)
 public/                   # favicon.svg, logo.svg, icons/*.png (disalin dari brand/)
-scripts/                  # migrate.ts, seed.ts, create-super-admin.ts (dijalankan via tsx)
+scripts/                  # migrate.ts, seed.ts + seed-data.ts, create-super-admin.ts (dijalankan via tsx)
 supabase/                 # config.toml Supabase lokal (tanpa migrasi; migrasi ada di drizzle/)
 src/
   app/
@@ -67,14 +67,17 @@ src/
   components/
     ui/                   # primitif shadcn yang sudah diberi token DBD
     brand/                # mascot.tsx, logo.tsx
-    tickets/ customers/ parts/ ...   # komponen per fitur
-  lib/                    # util murni: money.ts, phone.ts, wa.ts, dates.ts, logger.ts
+    auth/ tickets/ customers/ parts/ ...   # komponen per fitur
+  lib/                    # util murni yang aman untuk klien: money.ts, phone.ts, wa.ts, dates.ts, logger.ts,
+                          # safe-next.ts, action-result.ts, auth-client.ts, validation/*.ts (skema Zod)
   server/
     db/                   # client.ts, url.ts (pengaman host lokal), schema/*.ts
     auth/                 # auth.ts (konfigurasi Better Auth), context.ts, guards.ts
-    services/             # tickets.ts, customers.ts, parts.ts, payments.ts, reports.ts, ...
-    actions/              # Server Actions (tipis: validasi -> service)
+    services/             # shops.ts, tickets.ts, customers.ts, parts.ts, payments.ts, reports.ts, ...
+    actions/              # Server Actions (tipis: validasi -> service), result.ts (toActionResult)
     crypto/               # device-secret.ts
+    errors.ts             # AppError (kode error BSD bagian 6)
+  proxy.ts                # guard cepat: tamu ke /login?next={path} sebelum render
   styles/globals.css      # token DBD (CSS variables) + Tailwind
 tests/
   unit/  integration/  e2e/  helpers/
@@ -84,8 +87,9 @@ tests/
 - Bahasa & mode ketat: TypeScript `strict` + `noUncheckedIndexedAccess`.
 - Penamaan: file `kebab-case.ts(x)`; komponen `PascalCase`; tabel & kolom DB `snake_case` jamak; properti TS `camelCase` (dipetakan Drizzle); route URL bahasa Inggris; teks UI Bahasa Indonesia.
 - Akses data: hanya `src/server/**` yang boleh mengimpor `src/server/db`. Setiap fungsi service menerima `ctx: TenantContext` sebagai argumen pertama dan selalu memfilter `tenant_id = ctx.tenantId`. `tenant_id` **tidak pernah** diambil dari input klien. Setiap service baru wajib punya tes isolasi dua tenant.
-- Validasi input: skema Zod di setiap Server Action sebelum memanggil service.
-- Penanganan error: Server Action mengembalikan `ActionResult<T>` = `{ ok: true, data }` atau `{ ok: false, error: { code, message, fields? } }`; kode error mengikuti BSD bagian 6. Error tak terduga dicatat lewat `logger.error` dan ditampilkan sebagai "Terjadi kesalahan, coba lagi."
+- Validasi input: skema Zod di `src/lib/validation/` (dipakai form dan Server Action) di setiap Server Action sebelum memanggil service.
+- Form: memakai `<form action={fn}>` + `useActionState`, bukan `onSubmit`, agar React menahan submit sebelum hidrasi dan browser tidak pernah mengirim form sendiri (tanpa ini password bisa masuk URL). Nilai dikembalikan lewat state ke `defaultValue` karena React mereset form setelah action. Client Component menerima Server Action sebagai prop dari halaman, bukan mengimpornya.
+- Penanganan error: Server Action mengembalikan `ActionResult<T>` = `{ ok: true, data }` atau `{ ok: false, error: { code, message, fields? } }` lewat `toActionResult()`; service melempar `AppError`, kode error mengikuti BSD bagian 6. Error tak terduga dicatat lewat `logger.error` (nama + kode saja, pesan Drizzle memuat parameter query) dan ditampilkan sebagai "Terjadi kesalahan, coba lagi."
 - Konkurensi: update tiket menyertakan `updated_at` yang dibaca klien; jika tidak cocok kembalikan `CONFLICT`.
 - Transaksi: di dalam `db.transaction()` semua query wajib memakai `tx`, bukan `db` (dengan `max: 1` query lewat `db` akan menggantung). Jangan memakai fitur sesi Postgres (`SET`, advisory lock sesi, `LISTEN`) karena tidak didukung pooler mode transaction.
 - Uang: integer Rupiah; format dengan `formatRupiah()` di `src/lib/money.ts`. Tanggal: simpan `timestamptz` (UTC), tampilkan dengan zona waktu toko via `Intl.DateTimeFormat('id-ID')`.
@@ -94,9 +98,10 @@ tests/
 - Dilarang: `any`; SQL mentah dengan konkatenasi string (pakai query builder atau template `sql`); secret di kode; `console.log` di kode yang di-commit (pakai `logger`); mengimpor modul server dari Client Component; mencatat atau mengembalikan nilai kunci layar selain lewat aksi `revealLockSecret`.
 
 ## 5. Keamanan
-- Autentikasi: Better Auth email + password (hash bawaan scrypt), cookie sesi `httpOnly`, `secure` (production), `sameSite=lax`; sesi 7 hari, diperpanjang otomatis jika aktif. Rate limit bawaan Better Auth dengan penyimpanan database (PRD F-01).
-- Akun staf dibuat server-side: insert `users` + `accounts` (provider `credential`) dalam satu transaksi, password di-hash dengan `hashPassword` dari `better-auth/crypto`.
-- Otorisasi: `requireRole(ctx, roles)` di setiap Server Action; matriks lengkap di BSD bagian 5. Halaman `(app)` memeriksa sesi di layout; `admin/` hanya untuk `super_admin`.
+- Autentikasi: Better Auth email + password (hash bawaan scrypt), cookie sesi `httpOnly`, `secure` (dari `BETTER_AUTH_URL` https), `sameSite=lax`; sesi 7 hari, diperpanjang otomatis jika aktif. Render halaman tidak bisa menulis cookie, jadi `SessionRefresher` di layout `(app)` memanggil `/api/auth/get-session` saat halaman dimuat. Rate limit bawaan Better Auth dengan penyimpanan database (PRD F-01); login lewat klien ke `/api/auth/sign-in/email` karena `auth.api` di server tidak terkena rate limit.
+- Rute Better Auth yang dibuka hanya sign-in, sign-out, dan sesi: `disableSignUp` aktif, `/update-user` dan `/change-password` ada di `disabledPaths`, dan semua `additionalFields` memakai `input: false`.
+- Akun dibuat server-side: insert `users` + `accounts` (provider `credential`, `account_id` = id user) dalam satu transaksi, password di-hash dengan `hashPassword` dari `better-auth/crypto`.
+- Otorisasi: `requireRole(ctx, roles)` di setiap Server Action; matriks lengkap di BSD bagian 5. `getTenantContext()` (sesi di database, cek `is_active`) adalah pemeriksaan sebenarnya, dipanggil layout `(app)` di dalam `<Suspense>` dan setiap Server Action. `src/proxy.ts` hanya melihat keberadaan cookie agar tamu mendapat redirect 307 dengan `?next=` sebelum render; layout tidak bisa membaca path. Hasil sesi tidak di-cache (`use cache: private` dilarang di sini) agar penonaktifan staf langsung berlaku. `admin/` hanya untuk `super_admin`.
 - Data sensitif: `tickets.lock_secret_enc` dienkripsi AES-256-GCM dengan kunci `DEVICE_SECRET_KEY` (32 byte, base64), format `v1:{iv}:{tag}:{ciphertext}`. Token status publik = 16 byte acak (`base64url`, 22 karakter).
 - Header: `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options: nosniff`; halaman `/s/*` dan `/print/*` diberi `noindex`.
 - Secrets: lewat environment variable, daftar di `.env.example`.
@@ -107,7 +112,7 @@ tests/
 | Env | Tujuan | Catatan |
 |---|---|---|
 | local | pengembangan | Supabase lokal (`pnpm db:start`, Docker Desktop harus menyala); `pnpm db:reset` untuk mulai bersih. Studio di `http://localhost:54323`. |
-| test | Vitest & Playwright | Vitest: satu database per file tes, disalin dari database template yang sudah dimigrasikan, di Supabase lokal. Playwright: `pnpm build && pnpm start` terhadap database `fixmaster_e2e` di Supabase lokal (dibuat ulang, migrasi, seed di global setup). |
+| test | Vitest & Playwright | Vitest: satu database per file tes, disalin dari database template yang sudah dimigrasikan, di Supabase lokal. Playwright: `pnpm build && pnpm start` terhadap database `fixmaster_e2e` di Supabase lokal (dibuat ulang, migrasi, seed di global setup), 1 worker karena Chromium paralel menghabiskan CPU mesin 4 thread sampai server macet (IPD langkah 4). |
 | production | pengguna nyata | Vercel Hobby (`sin1`), lalu Pro setelah bisnis menghasilkan, + Supabase hosted Singapore; dibuat di IPD langkah 27 [ASUMSI A-11, A-12]. |
 
 Variabel lingkungan (`.env.example`):
@@ -115,7 +120,7 @@ Variabel lingkungan (`.env.example`):
 |---|---|---|
 | `DATABASE_URL` | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` | Lokal: Supabase lokal. Production: shared pooler mode transaction (`aws-[INDEX]-[REGION].pooler.supabase.com:6543`, user `postgres.[PROJECT-REF]`, SSL wajib). Klien selalu `prepare: false`; `max: 1` di production. |
 | `DIRECT_URL` | (kosong) | Hanya production, untuk migrasi: koneksi langsung `db.[PROJECT-REF].supabase.co:5432` (IPv6), atau shared pooler mode session port 5432 jika jaringan hanya IPv4. Kosong -> migrasi memakai `DATABASE_URL`. |
-| `BETTER_AUTH_SECRET` | string acak 32+ karakter | Wajib. |
+| `BETTER_AUTH_SECRET` | string acak 32+ karakter | Wajib untuk `pnpm dev` dan `pnpm start` (production menolak jalan tanpa ini). Tes Vitest memakai nilai bawaan Better Auth, jadi CI tidak butuh secret ini. |
 | `BETTER_AUTH_URL` / `APP_URL` | `http://localhost:3000` | `APP_URL` dipakai untuk link status `{APP_URL}/s/{token}`. |
 | `DEVICE_SECRET_KEY` | base64 32 byte | Kunci enkripsi kunci layar; kehilangan kunci = data kunci layar tidak bisa dibaca. |
 
@@ -125,7 +130,7 @@ CI/CD: GitHub Actions menjalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`, `p
 
 ## 7. Strategi Testing
 - Unit (Vitest): fungsi murni di `src/lib/` dan aturan domain: normalisasi nomor WA, format Rupiah, matriks transisi status, total & sisa bayar, builder link WA, enkripsi kunci layar (round-trip + ciphertext berbeda tiap kali).
-- Integrasi (Vitest + Supabase lokal, helper `createTestDb()`): service dengan database nyata, termasuk penomoran tiket/nota per toko, mutasi stok, transaksi bersamaan, aturan pengambilan unit, angka laporan, dan **isolasi dua tenant** untuk setiap service.
+- Integrasi (Vitest + Supabase lokal, helper `createTestDb()`, yang juga memasang database itu sebagai hasil `getDb()` sehingga service dan Better Auth dites tanpa parameter database): service dengan database nyata, termasuk penomoran tiket/nota per toko, mutasi stok, transaksi bersamaan, aturan pengambilan unit, angka laporan, dan **isolasi dua tenant** untuk setiap service. Rute `/api/auth/*` dites lewat `getAuth().handler()`, jadi rate limiter ikut berjalan.
 - E2E (Playwright, Chromium, viewport 390x844 dan 1280x800): registrasi -> terima unit -> estimasi disetujui via link -> nota -> lunas -> diambil; akses per peran; halaman status publik.
 - Aksesibilitas: `@axe-core/playwright` di E2E (IPD langkah 24); performa: Lighthouse preset mobile.
 - Perintah standar: `pnpm test`, `pnpm test:e2e`, `pnpm lint`, `pnpm typecheck`, `pnpm build`.
@@ -142,6 +147,7 @@ CI/CD: GitHub Actions menjalankan `pnpm lint`, `pnpm typecheck`, `pnpm test`, `p
 - Koneksi berlebih dari serverless ke Supabase -> shared pooler mode transaction (port 6543) dengan `prepare: false` dan `max: 1`.
 - Koneksi langsung Supabase hanya IPv6 pada tier Free dan Pro -> Vercel memakai pooler; migrasi dari jaringan IPv4 memakai pooler mode session (bagian 6).
 - Pembaruan Better Auth mengubah skema -> versi dikunci di `package.json`; jalankan generator skema Better Auth lalu bandingkan sebelum upgrade.
+- Rate limit login membaca IP dari `x-forwarded-for`; header berisi lebih dari satu IP tanpa `advanced.ipAddress.trustedProxies` jatuh ke satu kuota bersama semua pengguna -> Vercel mengirim satu IP, dan ini dicek saat deploy (IPD langkah 28).
 - Vercel Hobby hanya untuk penggunaan non-komersial dan kuotanya lebih kecil [ASUMSI A-12] -> pindah ke Vercel Pro paling lambat saat toko pertama membayar langganan; pantau pemakaian di dashboard Vercel.
 - Supabase tier Free dibatasi 2 project aktif dan 500 MB, menjeda project setelah 7 hari tanpa aktivitas, dan tidak menyertakan backup otomatis -> naik ke tier Pro bersamaan dengan Vercel Pro, atau sementara jalankan `pg_dump` terjadwal.
 - Kehilangan `DEVICE_SECRET_KEY` -> simpan di password manager owner proyek; nilai kunci layar memang bersifat sementara (dihapus saat diambil).

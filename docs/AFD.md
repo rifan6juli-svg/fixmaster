@@ -1,6 +1,6 @@
 # AFD - Fixmaster
 
-> Versi: 0.2 | Diperbarui: 2026-10-30 | Merujuk: PRD.md (ID fitur F-xx)
+> Versi: 0.3 | Diperbarui: 2026-10-31 | Merujuk: PRD.md (ID fitur F-xx)
 
 ## 1. Peta Layar
 | ID | Layar | Rute/URL | Akses | Fitur terkait |
@@ -62,7 +62,7 @@ flowchart TD
 - Email sudah terdaftar -> pesan di field email "Email sudah terdaftar".
 - Email/password salah -> "Email atau password salah".
 - Akun nonaktif -> "Akun Anda dinonaktifkan. Hubungi pemilik toko."
-- > 5 gagal/menit/IP -> "Terlalu banyak percobaan, coba lagi dalam 1 menit".
+- > 5 percobaan/menit/IP -> "Terlalu banyak percobaan, coba lagi dalam 1 menit".
 - Koneksi putus -> toast "Koneksi terputus, coba lagi"; isian form tetap.
 - Sesi habis (halaman mana pun) -> redirect `/login?next={path}`.
 

@@ -24,4 +24,5 @@ jobs:
       - run: pnpm test
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          BETTER_AUTH_URL: http://localhost:3000
       - run: pnpm build

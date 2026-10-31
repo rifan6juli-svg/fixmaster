@@ -1,6 +1,6 @@
 # BSD - Fixmaster
 
-> Versi: 0.3 | Diperbarui: 2026-10-30 | Merujuk: PRD.md, TRD.md, AFD.md
+> Versi: 0.4 | Diperbarui: 2026-10-31 | Merujuk: PRD.md, TRD.md, AFD.md
 > Database: Supabase Postgres (lokal via CLI, production hosted) | ORM/migrasi: Drizzle ORM + drizzle-kit (`drizzle/`)
 
 ## 1. ERD
@@ -283,7 +283,7 @@ Semua kolom Teknisi/Admin/Owner dibatasi `tenant_id` milik sesi. Akses ke data t
 | subscription_logs | - | - | - | baca milik tokonya | tambah & baca |
 
 ## 6. Kontrak API Ringkas
-Route Handler: `GET|POST /api/auth/[...all]` (Better Auth: sign-in, sign-out, sesi), `GET /manifest.webmanifest`. Selain itu semua mutasi adalah **Server Action** di `src/server/actions/`, yang mengembalikan `ActionResult<T>`. Teknisi* = hanya tiket yang ditugaskan.
+Route Handler: `GET|POST /api/auth/[...all]` (Better Auth: sign-in, sign-out, sesi; respons error sign-in: 401 `INVALID_EMAIL_OR_PASSWORD`, 403 `ACCOUNT_DISABLED`, 429), `GET /manifest.webmanifest`. Selain itu semua mutasi adalah **Server Action** di `src/server/actions/`, yang mengembalikan `ActionResult<T>`. Teknisi* = hanya tiket yang ditugaskan.
 | Server Action | Peran | Input | Sukses | Error |
 |---|---|---|---|---|
 | registerShop | Tamu | `{ shopName, ownerName, phoneWa, email, password }` | sesi + redirect `/dashboard` | VALIDATION, EMAIL_TAKEN |
@@ -322,10 +322,10 @@ Format error standar: `{ "ok": false, "error": { "code": "INSUFFICIENT_STOCK", "
 ## 7. Migrasi & Seed
 - Urutan migrasi: enum -> `tenants` -> `users` + tabel Better Auth -> `customers` -> `parts` -> `tickets` -> `ticket_items` -> `ticket_events` -> `payments` -> `stock_movements` -> `subscription_logs`.
 - Migrasi dibuat dengan `pnpm db:generate` (drizzle-kit) dan dijalankan dengan `pnpm db:migrate` (lokal: `DATABASE_URL` ke Supabase lokal; production: `DIRECT_URL`). File di `drizzle/` tidak boleh diubah setelah di-commit; perubahan = migrasi baru. Folder `supabase/migrations/` tidak dipakai.
-- Data seed (dev, `pnpm db:seed`, deterministik; hanya berjalan terhadap Postgres lokal, TRD bagian 5):
+- Data seed (dev, `pnpm db:seed`, deterministik; hanya berjalan terhadap Postgres lokal, TRD bagian 5; database yang sudah berisi data dibiarkan apa adanya, jalankan `pnpm db:reset` dulu):
   - Toko "Toko Demo Servis" (prefix `SRV`, trial aktif) dengan `owner@demo.test`, `admin@demo.test`, `teknisi@demo.test`, `teknisi2@demo.test` (password `password123`, hanya dev).
   - 8 pelanggan, 10 part (2 di bawah stok minimum), 12 tiket mencakup kedelapan status lengkap dengan item, pembayaran, dan event.
-  - Toko kedua "Toko Lain" dengan 1 owner, 1 teknisi, dan 2 tiket (untuk uji isolasi), memakai `require_signature = false` dan `technicians_can_claim = true` agar kedua mode pengaturan teruji.
+  - Toko kedua "Toko Lain" dengan `owner@lain.test`, `teknisi@lain.test`, dan 2 tiket (untuk uji isolasi), memakai `require_signature = false` dan `technicians_can_claim = true` agar kedua mode pengaturan teruji. Token status tiket seed tetap: `demo-status-token-0001` dst. dan `lain-status-token-0001` dst.
   - Super-admin `admin@fixmaster.test`.
 
 ## 8. Kebijakan Data

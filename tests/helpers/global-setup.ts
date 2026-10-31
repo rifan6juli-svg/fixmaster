@@ -1,6 +1,7 @@
 import {
   dropTestTemplate,
   prepareTestTemplate,
+  requireLocalSupabase,
   testDatabaseUrl,
 } from "./test-db";
 
@@ -10,17 +11,7 @@ export default async function setup() {
   Reflect.deleteProperty(Error, "prepareStackTrace");
 
   const url = testDatabaseUrl();
-
-  try {
-    await prepareTestTemplate(url);
-  } catch (error) {
-    if ((error as { code?: string }).code === "ECONNREFUSED") {
-      throw new Error(
-        "Local Supabase is not reachable. Start Docker Desktop, then run pnpm db:start.",
-      );
-    }
-    throw error;
-  }
+  await requireLocalSupabase(() => prepareTestTemplate(url));
 
   return () => dropTestTemplate(url);
 }

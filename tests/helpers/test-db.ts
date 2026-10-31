@@ -8,6 +8,7 @@ import * as schema from "@/server/db/schema";
 import { assertLocalDatabaseUrl } from "@/server/db/url";
 
 const TEMPLATE_DATABASE = "fixmaster_test_template";
+const E2E_DATABASE = "fixmaster_e2e";
 
 export function testDatabaseUrl() {
   if (existsSync(".env")) {
@@ -31,6 +32,29 @@ function connect(url: string) {
   return postgres(url, { max: 1, prepare: false, onnotice: () => {} });
 }
 
+async function migrateDatabase(url: string) {
+  const client = connect(url);
+  try {
+    await migrate(drizzle({ client }), { migrationsFolder: "drizzle" });
+  } finally {
+    await client.end();
+  }
+}
+
+/** Turns a refused connection into the step the developer has to take. */
+export async function requireLocalSupabase<T>(run: () => Promise<T>) {
+  try {
+    return await run();
+  } catch (error) {
+    if ((error as { code?: string }).code === "ECONNREFUSED") {
+      throw new Error(
+        "Local Supabase is not reachable. Start Docker Desktop, then run pnpm db:start.",
+      );
+    }
+    throw error;
+  }
+}
+
 /** Runs once per test run: one migrated template, copied by every test file. */
 export async function prepareTestTemplate(url: string) {
   const admin = connect(url);
@@ -46,14 +70,7 @@ export async function prepareTestTemplate(url: string) {
     await admin.end();
   }
 
-  const template = connect(withDatabase(url, TEMPLATE_DATABASE));
-  try {
-    await migrate(drizzle({ client: template }), {
-      migrationsFolder: "drizzle",
-    });
-  } finally {
-    await template.end();
-  }
+  await migrateDatabase(withDatabase(url, TEMPLATE_DATABASE));
 }
 
 export async function dropTestTemplate(url: string) {
@@ -65,7 +82,27 @@ export async function dropTestTemplate(url: string) {
   }
 }
 
-/** Gives a test file its own migrated database, dropped by `cleanup`. */
+export function e2eDatabaseUrl(url = testDatabaseUrl()) {
+  return withDatabase(url, E2E_DATABASE);
+}
+
+/** Gives a Playwright run a freshly migrated, empty database. */
+export async function recreateE2eDatabase(url: string) {
+  const admin = connect(url);
+  try {
+    await admin`DROP DATABASE IF EXISTS ${admin(E2E_DATABASE)} WITH (FORCE)`;
+    await admin`CREATE DATABASE ${admin(E2E_DATABASE)}`;
+  } finally {
+    await admin.end();
+  }
+
+  await migrateDatabase(e2eDatabaseUrl(url));
+}
+
+/**
+ * Gives a test file its own migrated database, dropped by `cleanup`. It also
+ * becomes what getDb() returns, so services and auth run against it unchanged.
+ */
 export async function createTestDb(url = testDatabaseUrl()) {
   assertLocalDatabaseUrl(url);
 
@@ -82,6 +119,8 @@ export async function createTestDb(url = testDatabaseUrl()) {
     onnotice: () => {},
   });
   const db: Database = drizzle({ client, schema });
+  (globalThis as typeof globalThis & { fixmasterDb?: Database }).fixmasterDb =
+    db;
 
   return {
     db,

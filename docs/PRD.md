@@ -1,6 +1,6 @@
 # PRD - Fixmaster
 
-> Versi: 0.3 | Diperbarui: 2026-10-30 | Status: Draft (asumsi dikonfirmasi, lihat bagian 8)
+> Versi: 0.4 | Diperbarui: 2026-10-31 | Status: Draft (asumsi dikonfirmasi, lihat bagian 8)
 
 ## 1. Ringkasan
 Fixmaster adalah SaaS B2B (web responsive + PWA) untuk toko reparasi laptop, handphone, tablet, dan perangkat elektronik lain di Indonesia. Fixmaster mencatat seluruh perjalanan unit servis: penerimaan unit dengan tanda tangan pelanggan, pengerjaan oleh teknisi, estimasi yang disetujui pelanggan lewat link, pemakaian sparepart dari stok, sampai nota, pembayaran, dan pengambilan. Pelanggan memantau status lewat link yang dikirim via WhatsApp. Nilai utamanya: toko tidak lagi kehilangan jejak unit, uang, dan stok, dan pelanggan tidak perlu menelepon untuk menanyakan progres.
@@ -51,7 +51,7 @@ Prioritas: P0 = wajib rilis, P1 = sebaiknya ada, P2 = jika sempat.
 - [ ] Form daftar (S-01): nama toko (3-80 karakter), nama owner, nomor WA toko, email, password (min 8 karakter). Simpan membuat 1 baris `tenants` + 1 `users` (role `owner`) dalam satu transaksi, `trial_ends_at` = sekarang + 14 hari [ASUMSI A-02], lalu langsung masuk ke S-04.
 - [ ] Login email + password (S-02); sesi berlaku 7 hari; logout menghapus sesi.
 - [ ] Semua rute aplikasi menolak tamu (redirect ke `/login`); user dengan `is_active = false` tidak bisa login.
-- [ ] Kasus gagal: email sudah terdaftar -> "Email sudah terdaftar"; password salah -> "Email atau password salah" (tanpa membedakan mana yang salah); > 5 percobaan login gagal per IP per menit -> ditolak sementara dengan pesan "Terlalu banyak percobaan, coba lagi dalam 1 menit".
+- [ ] Kasus gagal: email sudah terdaftar -> "Email sudah terdaftar"; password salah -> "Email atau password salah" (tanpa membedakan mana yang salah); > 5 percobaan login per IP per menit (berhasil maupun gagal, sesuai rate limit Better Auth) -> ditolak sementara dengan pesan "Terlalu banyak percobaan, coba lagi dalam 1 menit".
 
 **F-02 Staf & peran**
 - [ ] Owner membuat akun staf (S-15): nama, email, peran (`admin`/`technician`), password sementara (min 8). Staf wajib mengganti password saat login pertama (S-03).
